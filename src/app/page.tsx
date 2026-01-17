@@ -86,7 +86,7 @@ export default function Home() {
                 Education
               </h1>
 
-              <p className="text-lg md:text-xl text-stone-300 max-w-lg mb-8 leading-relaxed">
+              <p className="text-lg md:text-xl text-stone-600 dark:text-stone-300 max-w-lg mb-8 leading-relaxed">
                 Discover life-changing scholarships curated by AI, verified by humans. 
                 From Bachelor&apos;s to PhD — find your perfect match.
               </p>
@@ -103,7 +103,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/qualify"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-stone-700 bg-white border-2 border-stone-200 rounded-2xl hover:border-stone-300 hover:bg-stone-50 transition-all active:scale-[0.98]"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 rounded-2xl hover:border-stone-300 dark:hover:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-700 transition-all active:scale-[0.98]"
                 >
                   Check Eligibility
                 </Link>
@@ -127,21 +127,21 @@ export default function Home() {
                     <motion.div key={level} variants={item}>
                       <Link
                         href={`/programs?level=${level}`}
-                        className={`group relative block p-6 rounded-3xl bg-white border border-stone-200/80 hover:border-stone-300 shadow-lg shadow-stone-200/50 hover:shadow-xl hover:shadow-stone-200/60 transition-all hover:-translate-y-1 ${i === 0 ? 'col-span-1' : ''}`}
+                        className={`group relative block p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 hover:border-stone-300 dark:hover:border-stone-600 shadow-lg shadow-stone-200/50 dark:shadow-stone-900/50 hover:shadow-xl hover:shadow-stone-200/60 dark:hover:shadow-stone-900/60 transition-all hover:-translate-y-1 ${i === 0 ? 'col-span-1' : ''}`}
                       >
                         {/* Gradient accent */}
                         <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-3xl bg-gradient-to-r ${config.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                         
                         <span className="text-3xl mb-3 block">{config.icon}</span>
-                        <div className="text-4xl font-bold text-stone-900 mb-1">
+                        <div className="text-4xl font-bold text-stone-900 dark:text-white mb-1">
                           {loading ? (
                             <span className="inline-block w-8 h-8 bg-stone-200 rounded animate-pulse" />
                           ) : (
                             grouped[level]?.length ?? 0
                           )}
                         </div>
-                        <div className="text-sm font-medium text-stone-500">{config.label}</div>
-                        <div className="text-xs text-stone-400 mt-0.5">scholarships</div>
+                        <div className="text-sm font-medium text-stone-500 dark:text-stone-400">{config.label}</div>
+                        <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">scholarships</div>
                       </Link>
                     </motion.div>
                   );
@@ -163,10 +163,10 @@ export default function Home() {
             className="flex items-end justify-between mb-12"
           >
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-stone-900 mb-2">
+              <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-white mb-2">
                 Featured Programs
               </h2>
-              <p className="text-stone-500">Recently added and verified opportunities</p>
+              <p className="text-stone-500 dark:text-stone-400">Recently added and verified opportunities</p>
             </div>
             <Link
               href="/programs"
@@ -188,7 +188,7 @@ export default function Home() {
           >
             {loading ? (
               [...Array(6)].map((_, i) => (
-                <div key={i} className="p-6 rounded-3xl bg-white border border-stone-200/80 animate-pulse">
+                <div key={i} className="p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 animate-pulse">
                   <div className="h-6 bg-stone-200 rounded w-3/4 mb-3" />
                   <div className="h-4 bg-stone-100 rounded w-1/2 mb-4" />
                   <div className="flex gap-2">
@@ -202,12 +202,12 @@ export default function Home() {
                 <motion.div key={program.id} variants={item}>
                   <Link
                     href={`/programs/${program.id}`}
-                    className="group block p-6 rounded-3xl bg-white border border-stone-200/80 hover:border-primary-300 shadow-lg shadow-stone-200/30 hover:shadow-xl hover:shadow-primary-100/50 transition-all hover:-translate-y-1"
+                    className="group block p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 hover:border-primary-300 shadow-lg shadow-stone-200/30 dark:shadow-stone-900/30 hover:shadow-xl hover:shadow-primary-100/50 dark:hover:shadow-primary-900/30 transition-all hover:-translate-y-1"
                   >
-                    <h3 className="font-semibold text-lg text-stone-900 mb-1 group-hover:text-primary-600 transition-colors line-clamp-1">
+                    <h3 className="font-semibold text-lg text-stone-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
                       {program.name}
                     </h3>
-                    <p className="text-sm text-stone-500 mb-4">{program.provider}</p>
+                    <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">{program.provider}</p>
                     
                     <div className="flex flex-wrap gap-2">
                       <span className={`text-xs px-3 py-1.5 rounded-full font-medium capitalize ${
@@ -250,7 +250,7 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6 bg-gradient-to-b from-transparent via-stone-100/50 to-transparent">
+      <section className="py-24 px-6 bg-gradient-to-b from-transparent via-stone-100/50 dark:via-stone-800/50 to-transparent">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -258,10 +258,10 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-stone-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-white mb-4">
               How ScholarMap Works
             </h2>
-            <p className="text-stone-500 max-w-2xl mx-auto">
+            <p className="text-stone-500 dark:text-stone-400 max-w-2xl mx-auto">
               We use AI to discover, extract, and verify scholarship information so you can focus on what matters — your application.
             </p>
           </motion.div>
@@ -287,11 +287,11 @@ export default function Home() {
                 className="relative group"
               >
                 <div className="absolute -inset-4 rounded-3xl bg-linear-to-tr from-primary-100/50 to-accent-100/30 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
-                <div className="relative p-8 rounded-3xl bg-white border border-stone-200/80 shadow-lg shadow-stone-200/30">
+                <div className="relative p-8 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 shadow-lg shadow-stone-200/30 dark:shadow-stone-900/30">
                   <span className="text-5xl mb-6 block">{item.icon}</span>
                   <span className="text-xs font-mono text-primary-500 font-semibold">{item.step}</span>
-                  <h3 className="text-xl font-bold text-stone-900 mt-1 mb-2">{item.title}</h3>
-                  <p className="text-stone-500 text-sm leading-relaxed">{item.desc}</p>
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-white mt-1 mb-2">{item.title}</h3>
+                  <p className="text-stone-500 dark:text-stone-400 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </motion.div>
             ))}

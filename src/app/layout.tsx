@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-50">
           <div className="mx-4 mt-4">
-            <div className="max-w-7xl mx-auto glass rounded-2xl border border-stone-200/50 shadow-lg shadow-stone-200/20">
+            <div className="max-w-7xl mx-auto glass rounded-2xl border border-stone-200/50 dark:border-stone-700/50 shadow-lg shadow-stone-200/20 dark:shadow-stone-900/20">
               <div className="px-6 h-16 flex items-center justify-between">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-3 group">
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                   </div>
-                  <span className="text-xl font-bold tracking-tight text-white">
+                  <span className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">
                     Scholar<span className="text-primary-500">Map</span>
                   </span>
                 </Link>
@@ -38,13 +38,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="hidden md:flex items-center gap-1">
                   <Link 
                     href="/programs" 
-                    className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition-colors"
                   >
                     Browse Programs
                   </Link>
                   <Link 
                     href="/qualify" 
-                    className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition-colors"
                   >
                     Check Eligibility
                   </Link>
@@ -70,9 +70,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Footer */}
         <footer className="relative mt-32 overflow-hidden">
           {/* Decorative gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-100 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-100 dark:from-stone-900 to-transparent pointer-events-none" />
           
-          <div className="relative border-t border-stone-200/80">
+          <div className="relative border-t border-stone-200/80 dark:border-stone-700/80">
             <div className="max-w-7xl mx-auto px-6 py-16">
               <div className="grid md:grid-cols-4 gap-12">
                 {/* Brand */}
@@ -83,43 +83,43 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                       </svg>
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-white">ScholarMap</span>
+                    <span className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">ScholarMap</span>
                   </Link>
-                  <p className="text-stone-300 text-sm max-w-sm leading-relaxed">
+                  <p className="text-stone-500 dark:text-stone-300 text-sm max-w-sm leading-relaxed">
                     Mapping dreams to funded education. AI-curated scholarships for ambitious students worldwide.
                   </p>
                 </div>
 
                 {/* Links */}
                 <div>
-                  <h4 className="font-semibold text-white mb-4 text-sm">Explore</h4>
+                  <h4 className="font-semibold text-stone-900 dark:text-white mb-4 text-sm">Explore</h4>
                   <ul className="space-y-3">
-                    <li><Link href="/programs" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">All Programs</Link></li>
-                    <li><Link href="/programs?level=bachelor" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">Bachelor&apos;s</Link></li>
-                    <li><Link href="/programs?level=masters" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">Master&apos;s</Link></li>
-                    <li><Link href="/programs?level=phd" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">PhD</Link></li>
+                    <li><Link href="/programs" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">All Programs</Link></li>
+                    <li><Link href="/programs?level=bachelor" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">Bachelor&apos;s</Link></li>
+                    <li><Link href="/programs?level=masters" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">Master&apos;s</Link></li>
+                    <li><Link href="/programs?level=phd" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">PhD</Link></li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-white mb-4 text-sm">Tools</h4>
+                  <h4 className="font-semibold text-stone-900 dark:text-white mb-4 text-sm">Tools</h4>
                   <ul className="space-y-3">
-                    <li><Link href="/qualify" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">Eligibility Checker</Link></li>
-                    <li><Link href="/admin" className="text-sm text-stone-300 hover:text-primary-500 transition-colors">Admin Portal</Link></li>
+                    <li><Link href="/qualify" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">Eligibility Checker</Link></li>
+                    <li><Link href="/admin" className="text-sm text-stone-500 dark:text-stone-300 hover:text-primary-500 transition-colors">Admin Portal</Link></li>
                   </ul>
                 </div>
               </div>
 
               {/* Bottom */}
-              <div className="mt-16 pt-8 border-t border-stone-700 flex flex-col md:flex-row items-center justify-between gap-4">
-                <p className="text-sm text-stone-400">
+              <div className="mt-16 pt-8 border-t border-stone-200 dark:border-stone-700 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p className="text-sm text-stone-500 dark:text-stone-400">
                   &copy; {new Date().getFullYear()} ScholarMap. Clarity for your journey.
                 </p>
                 <div className="flex items-center gap-6">
-                  <span className="text-xs text-stone-400 font-mono">v1.0</span>
+                  <span className="text-xs text-stone-500 dark:text-stone-400 font-mono">v1.0</span>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
-                    <span className="text-xs text-stone-400">All systems operational</span>
+                    <span className="text-xs text-stone-500 dark:text-stone-400">All systems operational</span>
                   </div>
                 </div>
               </div>
