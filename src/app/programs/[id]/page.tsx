@@ -195,16 +195,29 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
             {/* CTA */}
             <div className="flex flex-wrap gap-4">
               <a
-                href={program.official_url}
+                href={program.application_url || program.official_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-linear-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
               >
-                Visit Official Site
+                {program.application_url ? "Apply Now" : "Visit Official Site"}
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
+              {program.application_url && (
+                <a
+                  href={program.official_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors"
+                >
+                  Learn More
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </a>
+              )}
               {program.last_verified_at && (
                 <span className="inline-flex items-center gap-2 px-4 py-2 text-sm text-stone-500">
                   <svg className="w-4 h-4 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -269,6 +282,98 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                     Common Rejection Reasons
                   </h2>
                   <p className="text-amber-700 leading-relaxed">{program.rejection_reasons}</p>
+                </motion.section>
+              )}
+
+              {/* Countries Eligible */}
+              {program.countries_eligible && program.countries_eligible.length > 0 && (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22 }}
+                  className="p-8 rounded-3xl bg-white border border-stone-200/80 shadow-lg shadow-stone-200/30"
+                >
+                  <h2 className="text-xl font-bold text-stone-900 mb-4 flex items-center gap-3">
+                    <span className="text-2xl">🌍</span>
+                    Open to Applicants From
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {program.countries_eligible.slice(0, 20).map((country) => (
+                      <span key={country} className="text-sm px-3 py-1.5 rounded-xl bg-primary-50 text-primary-700 border border-primary-100">
+                        {country}
+                      </span>
+                    ))}
+                    {program.countries_eligible.length > 20 && (
+                      <span className="text-sm px-3 py-1.5 rounded-xl bg-stone-100 text-stone-600">
+                        +{program.countries_eligible.length - 20} more countries
+                      </span>
+                    )}
+                  </div>
+                </motion.section>
+              )}
+
+              {/* Benefits */}
+              {program.benefits && Object.keys(program.benefits).length > 0 && (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.23 }}
+                  className="p-8 rounded-3xl bg-linear-to-tr from-green-50 to-emerald-50 border border-green-200"
+                >
+                  <h2 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-3">
+                    <span className="text-2xl">💰</span>
+                    What&apos;s Covered
+                  </h2>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {program.benefits.tuition && (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Tuition fees
+                      </div>
+                    )}
+                    {program.benefits.housing && (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Housing/Accommodation
+                      </div>
+                    )}
+                    {program.benefits.insurance && (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Health insurance
+                      </div>
+                    )}
+                    {program.benefits.stipend && (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Stipend: {program.benefits.stipend}
+                      </div>
+                    )}
+                    {program.benefits.travel && (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Travel: {program.benefits.travel}
+                      </div>
+                    )}
+                    {program.benefits.other && (
+                      <div className="flex items-center gap-2 text-green-700 sm:col-span-2">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        {program.benefits.other}
+                      </div>
+                    )}
+                  </div>
                 </motion.section>
               )}
 
@@ -438,15 +543,113 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                     <span className="text-stone-400">Funding</span>
                     <span className="capitalize">{program.funding_type.replace("_", " ")}</span>
                   </div>
+                  {program.award_amount && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400">Award</span>
+                      <span>{program.award_amount}</span>
+                    </div>
+                  )}
+                  {program.duration && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400">Duration</span>
+                      <span>{program.duration}</span>
+                    </div>
+                  )}
+                  {program.host_institution && program.host_institution !== program.provider && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-stone-400 shrink-0">Institution</span>
+                      <span className="text-right">{program.host_institution}</span>
+                    </div>
+                  )}
+                  {program.countries_of_study && program.countries_of_study.length > 0 && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-stone-400 shrink-0">Study in</span>
+                      <span className="text-right">
+                        {program.countries_of_study.slice(0, 2).join(", ")}
+                        {program.countries_of_study.length > 2 && ` +${program.countries_of_study.length - 2}`}
+                      </span>
+                    </div>
+                  )}
+                  {(program.age_min || program.age_max) && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400">Age</span>
+                      <span>
+                        {program.age_min && program.age_max ? `${program.age_min}-${program.age_max}` :
+                         program.age_max ? `Up to ${program.age_max}` :
+                         `${program.age_min}+`}
+                      </span>
+                    </div>
+                  )}
+                  {program.gpa_min && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400">Min GPA</span>
+                      <span>{program.gpa_min}</span>
+                    </div>
+                  )}
+                  {program.number_of_awards && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400"># Awards</span>
+                      <span>{program.number_of_awards}</span>
+                    </div>
+                  )}
+                  {program.is_renewable !== null && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-400">Renewable</span>
+                      <span>{program.is_renewable ? "Yes" : "No"}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-stone-400">Status</span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-accent-500" />
+                      <span className={`w-2 h-2 rounded-full ${program.status === 'active' ? 'bg-accent-500' : 'bg-amber-500'}`} />
                       {program.status}
                     </span>
                   </div>
                 </div>
               </motion.div>
+
+              {/* Language Requirements */}
+              {program.language_requirements && program.language_requirements.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.32 }}
+                  className="p-6 rounded-3xl bg-white border border-stone-200/80 shadow-lg shadow-stone-200/30"
+                >
+                  <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
+                    <span className="text-xl">🗣️</span>
+                    Language Requirements
+                  </h3>
+                  <div className="space-y-2">
+                    {program.language_requirements.map((req, i) => (
+                      <div key={i} className="text-sm px-3 py-2 rounded-xl bg-stone-50 text-stone-700">
+                        {req}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Contact */}
+              {program.contact_email && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="p-6 rounded-3xl bg-stone-50 border border-stone-200"
+                >
+                  <h3 className="text-lg font-bold text-stone-900 mb-3 flex items-center gap-2">
+                    <span className="text-xl">✉️</span>
+                    Contact
+                  </h3>
+                  <a 
+                    href={`mailto:${program.contact_email}`}
+                    className="text-sm text-primary-600 hover:text-primary-700 underline underline-offset-2"
+                  >
+                    {program.contact_email}
+                  </a>
+                </motion.div>
+              )}
             </div>
           </div>
         </div>

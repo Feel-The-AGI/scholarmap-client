@@ -21,6 +21,26 @@ export type Database = {
           last_verified_at: string | null;
           created_at: string;
           updated_at: string;
+          // Enhanced fields
+          application_url: string | null;
+          benefits: {
+            tuition?: boolean;
+            stipend?: string;
+            housing?: boolean;
+            travel?: string;
+            insurance?: boolean;
+            other?: string;
+          } | null;
+          contact_email: string | null;
+          host_institution: string | null;
+          duration: string | null;
+          age_min: number | null;
+          age_max: number | null;
+          gpa_min: number | null;
+          language_requirements: string[];
+          award_amount: string | null;
+          number_of_awards: number | null;
+          is_renewable: boolean | null;
         };
         Insert: Omit<Database["public"]["Tables"]["programs"]["Row"], "id" | "created_at" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["programs"]["Insert"]>;
