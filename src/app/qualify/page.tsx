@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 type UserProfile = {
   nationality: string;
   age: number | null;
-  degree: string;
+  degree: string;  // Current/highest degree
+  target_degree: string;  // What they're looking for (bachelor, masters, phd, postdoc)
   gpa: number | null;
   field_of_study: string;
   work_experience_years: number;
@@ -57,6 +58,7 @@ export default function QualifyPage() {
     nationality: "",
     age: null,
     degree: "",
+    target_degree: "",
     gpa: null,
     field_of_study: "",
     work_experience_years: 0,
@@ -434,6 +436,34 @@ export default function QualifyPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-stone-900 mb-3">
+                      What degree are you looking for? <span className="text-primary-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { value: "bachelor", label: "Bachelor's", icon: "🎓" },
+                        { value: "masters", label: "Master's", icon: "📚" },
+                        { value: "phd", label: "PhD", icon: "🔬" },
+                        { value: "postdoc", label: "Postdoc", icon: "🏆" },
+                      ].map((d) => (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => setForm({ ...form, target_degree: d.value })}
+                          className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                            form.target_degree === d.value
+                              ? "bg-accent-500 text-white shadow-lg shadow-accent-500/30"
+                              : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                          }`}
+                        >
+                          <span>{d.icon}</span>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-stone-900 mb-3">
                       GPA (on 4.0 scale)
                     </label>
                     <input
@@ -575,7 +605,7 @@ export default function QualifyPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={loading || !form.nationality || !form.degree}
+                      disabled={loading || !form.nationality || !form.degree || !form.target_degree}
                       className="flex-1 px-8 py-4 rounded-2xl bg-linear-to-r from-primary-600 to-primary-500 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {loading ? (
