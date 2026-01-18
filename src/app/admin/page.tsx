@@ -18,13 +18,22 @@ export default function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [url, setUrl] = useState("");
+  const [urls, setUrls] = useState("");
   const [ingesting, setIngesting] = useState(false);
-  const [result, setResult] = useState<{
-    success: boolean;
-    program_id?: string;
-    confidence?: number;
-    issues?: string[];
+  const [batchResults, setBatchResults] = useState<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: {
+      url: string;
+      success: boolean;
+      program_id?: string;
+      confidence?: number;
+      issues?: string[];
+      error?: string;
+      processing_time?: number;
+    }[];
+    total_time?: number;
   } | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [reviews, setReviews] = useState<
@@ -83,29 +92,37 @@ export default function AdminPage() {
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url) return;
+    const urlList = urls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+    if (urlList.length === 0) return;
+    
     setIngesting(true);
-    setResult(null);
+    setBatchResults(null);
+    
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/ingest`,
+        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/batch-ingest`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.NEXT_PUBLIC_AGENT_SECRET || "sm_agent_secret_2026_xK9mP3nQ7vL"}`,
           },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({ urls: urlList }),
         }
       );
       const data = await res.json();
-      setResult(data);
-      if (data.success) {
-        setUrl("");
+      setBatchResults(data);
+      if (data.successful > 0) {
+        setUrls("");
         loadData();
       }
     } catch (err) {
-      setResult({ success: false, issues: [(err as Error).message] });
+      setBatchResults({ 
+        total: urlList.length, 
+        successful: 0, 
+        failed: urlList.length, 
+        results: urlList.map(u => ({ url: u, success: false, error: (err as Error).message }))
+      });
     }
     setIngesting(false);
   };
@@ -268,20 +285,24 @@ export default function AdminPage() {
               >
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <span className="text-xl">🤖</span>
-                  Ingest Scholarship
+                  Batch Ingest Scholarships
                 </h2>
                 <form onSubmit={handleIngest} className="space-y-4">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://example.com/scholarship"
-                    className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-stone-400 focus:border-white/40 focus:ring-2 focus:ring-white/10 outline-none transition-all"
-                    required
-                  />
+                  <div>
+                    <textarea
+                      value={urls}
+                      onChange={(e) => setUrls(e.target.value)}
+                      placeholder="Paste one URL per line...&#10;https://example.com/scholarship1&#10;https://example.com/scholarship2&#10;https://example.com/scholarship3"
+                      rows={5}
+                      className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-stone-400 focus:border-white/40 focus:ring-2 focus:ring-white/10 outline-none transition-all resize-none font-mono text-sm"
+                    />
+                    <p className="text-xs text-stone-400 mt-2">
+                      {urls.split('\n').filter(u => u.trim()).length} URL(s) ready • Max 50 per batch
+                    </p>
+                  </div>
                   <button
                     type="submit"
-                    disabled={ingesting}
+                    disabled={ingesting || urls.split('\n').filter(u => u.trim()).length === 0}
                     className="w-full px-6 py-3.5 rounded-xl bg-white text-stone-900 font-semibold hover:bg-stone-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                   >
                     {ingesting ? (
@@ -290,45 +311,69 @@ export default function AdminPage() {
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
                           <path fill="currentColor" className="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Processing...
+                        Processing {urls.split('\n').filter(u => u.trim()).length} URLs...
                       </>
                     ) : (
                       <>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        Ingest URL
+                        Batch Ingest
                       </>
                     )}
                   </button>
                 </form>
 
                 <AnimatePresence>
-                  {result && (
+                  {batchResults && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className={`mt-4 p-4 rounded-xl ${
-                        result.success ? "bg-accent-500/20" : "bg-red-500/20"
-                      }`}
+                      className="mt-4 space-y-3"
                     >
-                      {result.success ? (
-                        <div>
-                          <p className="font-medium flex items-center gap-2">
-                            <span>✅</span>
-                            Success! {((result.confidence ?? 0) * 100).toFixed(0)}% confidence
-                          </p>
-                          {result.issues && result.issues.length > 0 && (
-                            <p className="text-sm mt-1 text-stone-300">Notes: {result.issues.join(", ")}</p>
-                          )}
+                      {/* Summary */}
+                      <div className={`p-4 rounded-xl ${batchResults.failed === 0 ? "bg-accent-500/20" : batchResults.successful === 0 ? "bg-red-500/20" : "bg-amber-500/20"}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{batchResults.failed === 0 ? "🎉" : batchResults.successful === 0 ? "❌" : "⚡"}</span>
+                            <div>
+                              <p className="font-semibold">
+                                {batchResults.successful}/{batchResults.total} Successful
+                              </p>
+                              <p className="text-xs text-stone-300">
+                                {batchResults.total_time?.toFixed(1)}s total
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <p className="flex items-center gap-2">
-                          <span>❌</span>
-                          {result.issues?.join(", ")}
-                        </p>
-                      )}
+                      </div>
+
+                      {/* Individual results */}
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {batchResults.results.map((r, i) => (
+                          <div
+                            key={i}
+                            className={`p-3 rounded-lg text-xs ${r.success ? "bg-accent-500/10" : "bg-red-500/10"}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate font-mono text-stone-300" title={r.url}>
+                                  {r.url}
+                                </p>
+                                {r.success ? (
+                                  <p className="text-accent-400 mt-1">
+                                    ✓ {((r.confidence ?? 0) * 100).toFixed(0)}% confidence • {r.processing_time?.toFixed(1)}s
+                                  </p>
+                                ) : (
+                                  <p className="text-red-400 mt-1">✗ {r.error}</p>
+                                )}
+                              </div>
+                              <span className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${r.success ? "bg-accent-500" : "bg-red-500"}`} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
