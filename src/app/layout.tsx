@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Floating decorative elements */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
           <div className="absolute -top-[40%] -right-[20%] w-[800px] h-[800px] rounded-full bg-linear-to-tr from-primary-100/40 to-accent-100/20 blur-3xl" />
-          <div className="absolute -bottom-[30%] -left-[15%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-accent-100/30 to-primary-100/10 blur-3xl" />
+          <div className="absolute -bottom-[30%] -left-[15%] w-[600px] h-[600px] rounded-full bg-linear-to-tr from-accent-100/30 to-primary-100/10 blur-3xl" />
         </div>
 
         {/* Navigation */}
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {/* CTA Button */}
                 <Link 
                   href="/qualify"
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-xl shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:from-primary-500 hover:to-primary-400 transition-all active:scale-[0.98]"
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-linear-to-r from-primary-600 to-primary-500 rounded-xl shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:from-primary-500 hover:to-primary-400 transition-all active:scale-[0.98]"
                 >
                   Find My Match
                 </Link>
@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Footer */}
         <footer className="relative mt-32 overflow-hidden">
           {/* Decorative gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-100 dark:from-stone-900 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-t from-stone-100 dark:from-stone-900 to-transparent pointer-events-none" />
           
           <div className="relative border-t border-stone-200/80 dark:border-stone-700/80">
             <div className="max-w-7xl mx-auto px-6 py-16">

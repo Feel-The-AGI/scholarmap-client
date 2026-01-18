@@ -58,7 +58,7 @@ export default function Home() {
         {/* Background Pattern */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 right-[10%] w-96 h-96 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/20 blur-3xl" />
-          <div className="absolute bottom-1/4 left-[5%] w-64 h-64 rounded-full bg-gradient-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
+          <div className="absolute bottom-1/4 left-[5%] w-64 h-64 rounded-full bg-linear-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 w-full">
@@ -94,7 +94,7 @@ export default function Home() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/programs"
-                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-linear-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
                 >
                   Browse All Programs
                   <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -130,7 +130,7 @@ export default function Home() {
                         className={`group relative block p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 hover:border-stone-300 dark:hover:border-stone-600 shadow-lg shadow-stone-200/50 dark:shadow-stone-900/50 hover:shadow-xl hover:shadow-stone-200/60 dark:hover:shadow-stone-900/60 transition-all hover:-translate-y-1 ${i === 0 ? 'col-span-1' : ''}`}
                       >
                         {/* Gradient accent */}
-                        <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-3xl bg-gradient-to-r ${config.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                        <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-3xl bg-linear-to-r ${config.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                         
                         <span className="text-3xl mb-3 block">{config.icon}</span>
                         <div className="text-4xl font-bold text-stone-900 dark:text-white mb-1">
@@ -250,7 +250,7 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6 bg-gradient-to-b from-transparent via-stone-100/50 dark:via-stone-800/50 to-transparent">
+      <section className="py-24 px-6 bg-linear-to-b from-transparent via-stone-100/50 dark:via-stone-800/50 to-transparent">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
