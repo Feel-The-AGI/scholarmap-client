@@ -192,7 +192,7 @@ function ProgramsContent() {
                         <h3 className="font-semibold text-lg text-stone-900 group-hover:text-primary-600 transition-colors line-clamp-2 flex-1">
                           {program.name}
                         </h3>
-                        <span className="text-2xl flex-shrink-0">{config.icon}</span>
+                        <span className="text-2xl shrink-0">{config.icon}</span>
                       </div>
 
                       {/* Provider */}

@@ -14,6 +14,90 @@ const levelConfig: Record<string, { icon: string; label: string; color: string; 
   postdoc: { icon: "🏆", label: "Postdoc", color: "text-teal-700", bg: "bg-teal-100" },
 };
 
+// Format eligibility rule value for human-readable display
+function formatRuleValue(rule: EligibilityRule): string {
+  const val = rule.value as Record<string, unknown>;
+  const operator = rule.operator;
+  const ruleType = rule.rule_type;
+
+  // Handle different value structures
+  if (operator === "exists" || operator === "=") {
+    // Check for condition-style values
+    if (val.condition && typeof val.condition === "string") {
+      return val.condition;
+    }
+    if (typeof val === "string") return val;
+    // Fallback: show first string value found
+    const firstVal = Object.values(val).find(v => typeof v === "string");
+    if (firstVal) return firstVal as string;
+    return "Required";
+  }
+
+  if (operator === "in" || operator === "not_in") {
+    const prefix = operator === "not_in" ? "Not from " : "";
+    // Countries
+    if (val.countries && Array.isArray(val.countries)) {
+      const countries = val.countries as string[];
+      if (countries.length <= 3) return prefix + countries.join(", ");
+      return `${prefix}${countries.slice(0, 3).join(", ")} +${countries.length - 3} more`;
+    }
+    // Regions
+    if (val.regions && Array.isArray(val.regions)) {
+      return prefix + (val.regions as string[]).join(", ");
+    }
+    // Degrees
+    if (val.degrees && Array.isArray(val.degrees)) {
+      return (val.degrees as string[]).join(", ");
+    }
+    // Groups (disability, refugees, etc)
+    if (val.groups && Array.isArray(val.groups)) {
+      return (val.groups as string[]).join(", ");
+    }
+    // Generic array handling
+    const arrayVal = Object.values(val).find(v => Array.isArray(v)) as string[] | undefined;
+    if (arrayVal) {
+      if (arrayVal.length <= 3) return prefix + arrayVal.join(", ");
+      return `${prefix}${arrayVal.slice(0, 3).join(", ")} +${arrayVal.length - 3} more`;
+    }
+  }
+
+  if (operator === ">=" || operator === ">" || operator === "<=" || operator === "<") {
+    const symbol = operator === ">=" ? "≥" : operator === "<=" ? "≤" : operator;
+    if (ruleType === "gpa" && val.min !== undefined) {
+      return `GPA ${symbol} ${val.min}`;
+    }
+    if (ruleType === "age" && val.max !== undefined) {
+      return `Age ${symbol} ${val.max}`;
+    }
+    if (ruleType === "age" && val.min !== undefined) {
+      return `Age ${symbol} ${val.min}`;
+    }
+    if (ruleType === "work_experience" && val.years !== undefined) {
+      return `${symbol} ${val.years} year${val.years !== 1 ? "s" : ""} experience`;
+    }
+    // Generic min/max
+    if (val.min !== undefined) return `${symbol} ${val.min}`;
+    if (val.max !== undefined) return `${symbol} ${val.max}`;
+  }
+
+  if (operator === "between") {
+    if (val.min !== undefined && val.max !== undefined) {
+      if (ruleType === "age") return `Age ${val.min}-${val.max}`;
+      if (ruleType === "gpa") return `GPA ${val.min}-${val.max}`;
+      return `${val.min} - ${val.max}`;
+    }
+  }
+
+  // Fallback: try to extract meaningful text
+  const condition = val.condition || val.requirement || val.description;
+  if (condition && typeof condition === "string") return condition;
+
+  // Last resort: clean JSON display
+  const jsonStr = JSON.stringify(val);
+  if (jsonStr.length < 100) return jsonStr.replace(/[{}"]|\\n/g, "").replace(/,/g, ", ");
+  return "See details";
+}
+
 export default function ProgramPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [data, setData] = useState<{
@@ -69,7 +153,7 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-[10%] w-96 h-96 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/20 blur-3xl" />
-          <div className="absolute bottom-0 right-[20%] w-64 h-64 rounded-full bg-gradient-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
+          <div className="absolute bottom-0 right-[20%] w-64 h-64 rounded-full bg-linear-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
         </div>
 
         <div className="max-w-4xl mx-auto relative">
@@ -114,7 +198,7 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                 href={program.official_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-linear-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
               >
                 Visit Official Site
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -218,7 +302,7 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                               </span>
                             </div>
                             <p className="text-stone-700 text-sm">
-                              {rule.operator} {JSON.stringify(rule.value)}
+                              {formatRuleValue(rule)}
                             </p>
                             {rule.source_snippet && (
                               <p className="text-xs text-stone-500 mt-2 italic border-l-2 border-stone-200 pl-3">
@@ -248,7 +332,7 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                   <div className="space-y-3">
                     {requirements.map((req) => (
                       <div key={req.id} className="flex items-start gap-3 p-4 rounded-2xl bg-stone-50 border border-stone-100">
-                        <div className={`mt-0.5 w-3 h-3 rounded-full flex-shrink-0 ${req.mandatory ? "bg-primary-500" : "bg-stone-300"}`} />
+                        <div className={`mt-0.5 w-3 h-3 rounded-full shrink-0 ${req.mandatory ? "bg-primary-500" : "bg-stone-300"}`} />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs px-2 py-0.5 rounded-lg bg-stone-200 text-stone-700 capitalize font-medium">
@@ -283,7 +367,7 @@ export default function ProgramPage({ params }: { params: Promise<{ id: string }
                   </h3>
                   <div className="relative pl-6">
                     {/* Line */}
-                    <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-primary-500 via-primary-300 to-stone-200" />
+                    <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-linear-to-b from-primary-500 via-primary-300 to-stone-200" />
                     
                     <div className="space-y-6">
                       {deadlines.map((deadline, i) => (

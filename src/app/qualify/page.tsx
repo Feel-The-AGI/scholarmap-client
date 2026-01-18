@@ -107,7 +107,7 @@ export default function QualifyPage() {
       <div className="relative py-12 px-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-[10%] w-96 h-96 rounded-full bg-linear-to-tr from-accent-200/40 to-primary-200/20 blur-3xl" />
-          <div className="absolute bottom-0 right-[20%] w-64 h-64 rounded-full bg-gradient-to-tr from-primary-200/30 to-accent-200/10 blur-3xl" />
+          <div className="absolute bottom-0 right-[20%] w-64 h-64 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/10 blur-3xl" />
         </div>
 
         <div className="max-w-4xl mx-auto relative">
@@ -153,7 +153,7 @@ export default function QualifyPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             onSubmit={handleSubmit}
-            className="relative p-8 md:p-10 rounded-[2rem] bg-white border border-stone-200/80 shadow-xl shadow-stone-200/30"
+            className="relative p-8 md:p-10 rounded-4xl bg-white border border-stone-200/80 shadow-xl shadow-stone-200/30"
           >
             {/* Step Indicator */}
             <div className="flex items-center justify-between mb-10">
@@ -308,7 +308,7 @@ export default function QualifyPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 px-8 py-4 rounded-2xl bg-linear-to-r from-primary-600 to-primary-500 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {loading ? (
                         <>
