@@ -65,6 +65,7 @@ export default function OnboardingPage() {
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
   const [conversationStep, setConversationStep] = useState(0);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   
@@ -473,10 +474,21 @@ export default function OnboardingPage() {
   };
 
   const saveProfile = async (data: ExtractedData) => {
-    if (!user) return;
+    console.log("=== SAVE PROFILE STARTED ===");
+    console.log("User:", user?.id);
+    console.log("Data to save:", data);
+    
+    if (!user) {
+      console.error("No user found, skipping save but redirecting...");
+      router.push("/qualify?from=onboarding");
+      return;
+    }
+
+    setIsCompleting(true);
 
     try {
-      // Update user's full name and mark onboarding complete
+      // Try to update user's full name and mark onboarding complete
+      console.log("Attempting to update users table...");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: userError } = await (supabase as any)
         .from("users")
@@ -486,9 +498,14 @@ export default function OnboardingPage() {
         })
         .eq("id", user.id);
       
-      if (userError) console.error("User update error:", userError);
+      if (userError) {
+        console.error("User update error (continuing anyway):", userError);
+      } else {
+        console.log("Users table updated successfully");
+      }
 
-      // Upsert academic profile (creates if not exists, updates if exists)
+      // Upsert academic profile
+      console.log("Attempting to upsert academic_profiles...");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: profileError } = await (supabase as any)
         .from("academic_profiles")
@@ -512,16 +529,21 @@ export default function OnboardingPage() {
           onConflict: "user_id"
         });
 
-      if (profileError) console.error("Profile upsert error:", profileError);
+      if (profileError) {
+        console.error("Profile upsert error (continuing anyway):", profileError);
+      } else {
+        console.log("Academic profile upserted successfully");
+      }
 
-      await refreshUser();
+      console.log("Refreshing user...");
+      await refreshUser().catch(e => console.error("Refresh user error:", e));
       
-      // Redirect to eligibility check
-      setTimeout(() => {
-        router.push("/qualify?from=onboarding");
-      }, 2000);
     } catch (error) {
-      console.error("Error saving profile:", error);
+      console.error("=== SAVE PROFILE ERROR ===", error);
+    } finally {
+      // ALWAYS redirect - don't leave user stuck
+      console.log("=== REDIRECTING TO QUALIFY ===");
+      router.push("/qualify?from=onboarding");
     }
   };
 
@@ -598,18 +620,22 @@ export default function OnboardingPage() {
             ))}
           </AnimatePresence>
           
-          {loading && (
+          {(loading || isCompleting) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex justify-start"
             >
               <div className="bg-white shadow-md shadow-stone-200/50 rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                  <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                  <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                </div>
+                {isCompleting ? (
+                  <p className="text-stone-600 text-sm">Finding your scholarships...</p>
+                ) : (
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
