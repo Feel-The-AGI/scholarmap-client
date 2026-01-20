@@ -69,8 +69,132 @@ export default function OnboardingPage() {
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   
+  // TTS State
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // Initialize AudioContext on user interaction
+  const initAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    // Resume if suspended (needed for autoplay policies)
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  }, []);
+
+  // Convert PCM base64 to playable audio buffer
+  const playPCMAudio = useCallback(async (base64Data: string) => {
+    try {
+      const audioContext = initAudioContext();
+      
+      // Decode base64 to raw bytes
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // PCM is 16-bit signed little-endian, 24kHz, mono
+      const sampleRate = 24000;
+      const numSamples = bytes.length / 2; // 2 bytes per sample
+      
+      // Create audio buffer
+      const audioBuffer = audioContext.createBuffer(1, numSamples, sampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+      
+      // Convert PCM to float samples
+      const dataView = new DataView(bytes.buffer);
+      for (let i = 0; i < numSamples; i++) {
+        const int16 = dataView.getInt16(i * 2, true); // little-endian
+        channelData[i] = int16 / 32768; // Normalize to -1.0 to 1.0
+      }
+      
+      // Stop any currently playing audio
+      if (currentSourceRef.current) {
+        currentSourceRef.current.stop();
+        currentSourceRef.current = null;
+      }
+      
+      // Create and play source node
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => {
+        setIsSpeaking(false);
+        currentSourceRef.current = null;
+      };
+      
+      currentSourceRef.current = source;
+      source.start();
+      setIsSpeaking(true);
+      
+    } catch (error) {
+      console.error("Error playing PCM audio:", error);
+      setIsSpeaking(false);
+    }
+  }, [initAudioContext]);
+
+  // Speak text using Gemini TTS
+  const speak = useCallback(async (text: string) => {
+    if (!ttsEnabled || !text.trim()) return;
+    
+    // Stop any current speech first
+    if (currentSourceRef.current) {
+      currentSourceRef.current.stop();
+      currentSourceRef.current = null;
+    }
+    
+    setTtsLoading(true);
+    
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/tts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            voice: "Aoede", // Warm, friendly female voice for Ada
+            style: "warmly and conversationally",
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error("TTS request failed");
+      }
+      
+      const data = await response.json();
+      
+      if (data.audio_base64) {
+        await playPCMAudio(data.audio_base64);
+      }
+    } catch (error) {
+      console.error("TTS error:", error);
+      // Silently fail - user can still read the text
+    } finally {
+      setTtsLoading(false);
+    }
+  }, [ttsEnabled, playPCMAudio]);
+
+  // Stop speaking
+  const stopSpeaking = useCallback(() => {
+    if (currentSourceRef.current) {
+      currentSourceRef.current.stop();
+      currentSourceRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
 
   // LocalStorage key for this user
   const localStorageKey = user ? `scholarmap_onboarding_${user.id}` : null;
@@ -239,6 +363,8 @@ export default function OnboardingPage() {
             timestamp: new Date().toISOString(),
           };
           setMessages([initialMsg]);
+          // Speak the initial greeting after a short delay
+          setTimeout(() => speak(INITIAL_MESSAGE), 500);
         }
       } catch (error) {
         // No existing conversation, start fresh
@@ -248,13 +374,15 @@ export default function OnboardingPage() {
           timestamp: new Date().toISOString(),
         };
         setMessages([initialMsg]);
+        // Speak the initial greeting after a short delay
+        setTimeout(() => speak(INITIAL_MESSAGE), 500);
       } finally {
         setLoadingConversation(false);
       }
     };
     
     loadExistingConversation();
-  }, [user, supabase, loadFromLocalStorage, saveToLocalStorage]);
+  }, [user, supabase, loadFromLocalStorage, saveToLocalStorage, speak]);
 
   // Check for voice support
   useEffect(() => {
@@ -270,6 +398,9 @@ export default function OnboardingPage() {
 
   const startListening = () => {
     if (!voiceSupported) return;
+    
+    // Stop Ada from speaking when user wants to talk
+    stopSpeaking();
     
     const SpeechRecognitionClass = (window as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || 
       (window as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
@@ -357,6 +488,9 @@ export default function OnboardingPage() {
       };
       const allMessages = [...updatedMessages, assistantMessage];
       setMessages(allMessages);
+      
+      // Speak Ada's response
+      speak(data.response);
       
       // Update step
       const newStep = data.next_step;
@@ -468,6 +602,9 @@ export default function OnboardingPage() {
     const assistantMsg: Message = { role: "assistant", content: response, timestamp: new Date().toISOString() };
     const allMsgs = [...messages, { role: "user" as const, content: userInput, timestamp: new Date().toISOString() }, assistantMsg];
     setMessages(allMsgs);
+    
+    // Speak Ada's response
+    speak(response);
     
     // Save fallback progress too
     saveConversationProgress(allMsgs, newData, step + 1, step >= 4 ? "completed" : "in_progress");
@@ -587,14 +724,53 @@ export default function OnboardingPage() {
     <div className="h-screen h-[100dvh] bg-stone-50 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 bg-white border-b border-stone-200 px-4 py-3 sm:py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm sm:text-base">A</span>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm sm:text-base">A</span>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="font-semibold text-stone-900 text-sm sm:text-base">Ada</h1>
+                {/* Speaking indicator */}
+                {(isSpeaking || ttsLoading) && (
+                  <span className="flex gap-0.5 items-end h-4">
+                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-3 animate-bounce'}`} style={{ animationDelay: "0ms" }}></span>
+                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-4 animate-bounce'}`} style={{ animationDelay: "150ms" }}></span>
+                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-3 animate-bounce'}`} style={{ animationDelay: "300ms" }}></span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-stone-500 truncate">Your Scholarship Advisor</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="font-semibold text-stone-900 text-sm sm:text-base">Ada</h1>
-            <p className="text-xs text-stone-500 truncate">Your Scholarship Advisor</p>
-          </div>
+          
+          {/* TTS Toggle Button */}
+          <button
+            onClick={() => {
+              if (ttsEnabled) {
+                stopSpeaking();
+              }
+              setTtsEnabled(!ttsEnabled);
+            }}
+            className={`p-2 rounded-lg transition-all ${
+              ttsEnabled
+                ? "bg-primary-100 text-primary-600 hover:bg-primary-200"
+                : "bg-stone-100 text-stone-400 hover:bg-stone-200"
+            }`}
+            title={ttsEnabled ? "Mute Ada" : "Unmute Ada"}
+          >
+            {ttsEnabled ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
