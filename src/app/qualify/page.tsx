@@ -102,9 +102,10 @@ export default function QualifyPage() {
     }
   };
 
-  const totalMatches = results
-    ? results.eligible.length + results.likely_eligible.length + results.maybe.length
-    : 0;
+  // Count is available for future use
+  // const totalMatches = results
+  //   ? results.eligible.length + results.likely_eligible.length + results.maybe.length
+  //   : 0;
 
   const renderProgramCard = (match: ProgramMatch, variant: "eligible" | "likely" | "maybe" | "unlikely") => {
     const config = levelConfig[match.level] || { icon: "📄", color: "text-stone-700", bg: "bg-stone-100" };

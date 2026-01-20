@@ -192,14 +192,15 @@ export default function OnboardingPage() {
     const newData: ExtractedData = { ...extractedData };
 
     switch (step) {
-      case 0: // Name and nationality
+      case 0: { // Name and nationality
         const parts = userInput.split(/from|,/i);
         if (parts.length >= 1) newData.full_name = parts[0].replace(/i'm|i am|my name is/i, "").trim();
         if (parts.length >= 2) newData.nationality = parts[1].trim();
         response = `Nice to meet you${newData.full_name ? `, ${newData.full_name}` : ""}! What are you currently studying or what did you last complete? (e.g., "Finished BSc in Computer Science at MIT")`;
         setConversationStep(1);
         break;
-      case 1: // Current education
+      }
+      case 1: { // Current education
         if (userInput.toLowerCase().includes("bachelor") || userInput.toLowerCase().includes("bsc") || userInput.toLowerCase().includes("ba")) {
           newData.current_education_level = "undergraduate";
         } else if (userInput.toLowerCase().includes("master") || userInput.toLowerCase().includes("msc") || userInput.toLowerCase().includes("ma")) {
@@ -212,13 +213,14 @@ export default function OnboardingPage() {
         response = `Got it! So you're looking for a Master's, PhD, or another degree next? And which countries are you interested in studying in?`;
         setConversationStep(2);
         break;
-      case 2: // Target degree and countries
+      }
+      case 2: { // Target degree and countries
         if (userInput.toLowerCase().includes("master")) newData.target_degree = "masters";
         else if (userInput.toLowerCase().includes("phd") || userInput.toLowerCase().includes("doctor")) newData.target_degree = "phd";
         else if (userInput.toLowerCase().includes("bachelor")) newData.target_degree = "bachelor";
         else if (userInput.toLowerCase().includes("postdoc")) newData.target_degree = "postdoc";
         
-        const countries = [];
+        const countries: string[] = [];
         if (userInput.toLowerCase().includes("us") || userInput.toLowerCase().includes("america") || userInput.toLowerCase().includes("usa")) countries.push("United States");
         if (userInput.toLowerCase().includes("uk") || userInput.toLowerCase().includes("britain") || userInput.toLowerCase().includes("england")) countries.push("United Kingdom");
         if (userInput.toLowerCase().includes("canada")) countries.push("Canada");
@@ -229,7 +231,8 @@ export default function OnboardingPage() {
         response = `Great choices! Quick question - what was your GPA (roughly)? And do you have any work experience?`;
         setConversationStep(3);
         break;
-      case 3: // GPA and work experience
+      }
+      case 3: { // GPA and work experience
         const gpaMatch = userInput.match(/(\d+\.?\d*)/);
         if (gpaMatch) newData.gpa = parseFloat(gpaMatch[1]);
         
@@ -243,7 +246,8 @@ export default function OnboardingPage() {
         response = `Last thing - any special circumstances that might help your application? (First-generation student, financial need, disability, refugee status?)`;
         setConversationStep(4);
         break;
-      case 4: // Circumstances
+      }
+      case 4: { // Circumstances
         newData.circumstances = {
           financial_need: userInput.toLowerCase().includes("financial") || userInput.toLowerCase().includes("aid") || userInput.toLowerCase().includes("need"),
           first_gen: userInput.toLowerCase().includes("first") || userInput.toLowerCase().includes("first-gen") || userInput.toLowerCase().includes("first generation"),
@@ -257,6 +261,7 @@ export default function OnboardingPage() {
         // Save and complete
         setTimeout(() => saveProfile(newData), 1500);
         break;
+      }
       default:
         response = "Thanks! Processing your information...";
     }

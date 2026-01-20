@@ -1,29 +1,25 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 
 function LoginContent() {
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    urlError ? decodeURIComponent(urlError).replace(/_/g, " ") : null
+  );
   const [loading, setLoading] = useState(false);
   
   const { signIn, signInWithGoogle } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
-  const urlError = searchParams.get("error");
-
-  // Show error from URL params (e.g., from failed auth callback)
-  useEffect(() => {
-    if (urlError) {
-      setError(decodeURIComponent(urlError).replace(/_/g, " "));
-    }
-  }, [urlError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

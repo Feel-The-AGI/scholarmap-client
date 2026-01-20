@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import type { Program } from "@/lib/types";
@@ -49,6 +49,15 @@ export default function AdminPage() {
 
   const supabase = createClient();
 
+  const loadData = useCallback(async () => {
+    const [{ data: progs }, { data: revs }] = await Promise.all([
+      supabase.from("programs").select("*").order("created_at", { ascending: false }),
+      supabase.from("agent_reviews").select("*").eq("resolved", false).order("created_at", { ascending: false }),
+    ]);
+    setPrograms((progs ?? []) as Program[]);
+    setReviews(revs ?? []);
+  }, [supabase]);
+
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -56,22 +65,13 @@ export default function AdminPage() {
       setLoading(false);
     };
     checkUser();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     if (user) {
       loadData();
     }
-  }, [user]);
-
-  const loadData = async () => {
-    const [{ data: progs }, { data: revs }] = await Promise.all([
-      supabase.from("programs").select("*").order("created_at", { ascending: false }),
-      supabase.from("agent_reviews").select("*").eq("resolved", false).order("created_at", { ascending: false }),
-    ]);
-    setPrograms((progs ?? []) as Program[]);
-    setReviews(revs ?? []);
-  };
+  }, [user, loadData]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
