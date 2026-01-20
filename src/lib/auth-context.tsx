@@ -31,10 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const supabase = createClient();
 
-  const fetchUserData = useCallback(async (userId: string) => {
+  const fetchUserData = useCallback(async (userId: string, supabaseUserData?: SupabaseUser) => {
     try {
       // Fetch user profile
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
         .eq("id", userId)
@@ -42,6 +42,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (userData) {
         setUser(userData as User);
+      } else if (supabaseUserData) {
+        // Fallback: create a synthetic user object from Supabase auth data
+        // This handles the case where the database trigger hasn't run yet
+        setUser({
+          id: supabaseUserData.id,
+          email: supabaseUserData.email || "",
+          full_name: supabaseUserData.user_metadata?.full_name || null,
+          avatar_url: supabaseUserData.user_metadata?.avatar_url || null,
+          onboarding_complete: false,
+          subscription_tier: "free",
+          created_at: supabaseUserData.created_at,
+          last_active_at: new Date().toISOString(),
+        });
+        
+        // Log the error for debugging but don't fail
+        if (userError) {
+          console.log("User profile not yet created, using auth metadata", userError.message);
+        }
       }
 
       // Fetch academic profile
@@ -64,6 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (subData) {
         setSubscription(subData as Subscription);
+      } else {
+        // Fallback: default subscription for new users
+        setSubscription({
+          id: "",
+          user_id: userId,
+          tier: "free",
+          status: "active",
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          current_period_start: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          created_at: new Date().toISOString(),
+        });
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -72,9 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     if (supabaseUser?.id) {
-      await fetchUserData(supabaseUser.id);
+      await fetchUserData(supabaseUser.id, supabaseUser);
     }
-  }, [supabaseUser?.id, fetchUserData]);
+  }, [supabaseUser, fetchUserData]);
 
   useEffect(() => {
     // Get initial session
@@ -85,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(initialSession?.user ?? null);
         
         if (initialSession?.user?.id) {
-          await fetchUserData(initialSession.user.id);
+          await fetchUserData(initialSession.user.id, initialSession.user);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -103,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(newSession?.user ?? null);
         
         if (newSession?.user?.id) {
-          await fetchUserData(newSession.user.id);
+          await fetchUserData(newSession.user.id, newSession.user);
         } else {
           setUser(null);
           setAcademicProfile(null);

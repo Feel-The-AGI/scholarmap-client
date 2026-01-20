@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import type { Program } from "@/lib/types";
+import { Suspense } from "react";
 
 const container = {
   hidden: { opacity: 0 },
@@ -31,7 +33,23 @@ const levelConfig = {
   postdoc: { icon: "🏆", label: "Postdoc", color: "from-accent-500 to-teal-600" },
 };
 
-export default function Home() {
+// Component that handles auth code redirect
+function AuthCodeHandler() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      // Redirect to auth callback with the code
+      router.replace(`/auth/callback?code=${code}`);
+    }
+  }, [searchParams, router]);
+  
+  return null;
+}
+
+function HomeContent() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -334,5 +352,16 @@ export default function Home() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <AuthCodeHandler />
+      </Suspense>
+      <HomeContent />
+    </>
   );
 }
