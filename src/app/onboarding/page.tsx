@@ -140,7 +140,7 @@ export default function OnboardingPage() {
     try {
       // Call the backend to process the message and extract data
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_AGENT_URL}/onboarding/chat`,
+        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/onboarding/chat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
