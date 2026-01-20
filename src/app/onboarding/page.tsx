@@ -198,7 +198,7 @@ export default function OnboardingPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: text,
-            voice: "Aoede",
+            voice: "Kore", // Kore - confirmed working female voice in Gemini TTS docs
             style: "warmly and conversationally",
           }),
         }
