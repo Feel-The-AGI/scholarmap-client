@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
@@ -58,22 +58,116 @@ export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: INITIAL_MESSAGE,
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingConversation, setLoadingConversation] = useState(true);
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
   const [conversationStep, setConversationStep] = useState(0);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  // Save conversation progress to database
+  const saveConversationProgress = useCallback(async (
+    msgs: Message[], 
+    data: ExtractedData, 
+    step: number,
+    status: "started" | "in_progress" | "completed" = "in_progress"
+  ) => {
+    if (!user) return;
+    
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = supabase as any;
+      
+      if (conversationId) {
+        // Update existing conversation
+        await client
+          .from("onboarding_conversations")
+          .update({
+            messages: msgs,
+            extracted_data: data,
+            completion_status: status,
+          })
+          .eq("id", conversationId);
+      } else {
+        // Create new conversation
+        const { data: newConv } = await client
+          .from("onboarding_conversations")
+          .insert({
+            user_id: user.id,
+            messages: msgs,
+            extracted_data: data,
+            completion_status: status,
+          })
+          .select("id")
+          .single();
+        
+        if (newConv?.id) {
+          setConversationId(newConv.id);
+        }
+      }
+      console.log("Conversation saved at step", step);
+    } catch (error) {
+      console.error("Error saving conversation:", error);
+    }
+  }, [user, supabase, conversationId]);
+
+  // Load existing conversation on mount
+  useEffect(() => {
+    const loadExistingConversation = async () => {
+      if (!user) {
+        setLoadingConversation(false);
+        return;
+      }
+      
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingConv } = await (supabase as any)
+          .from("onboarding_conversations")
+          .select("*")
+          .eq("user_id", user.id)
+          .neq("completion_status", "completed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (existingConv && existingConv.messages?.length > 0) {
+          // Resume existing conversation
+          setMessages(existingConv.messages);
+          setExtractedData(existingConv.extracted_data || {});
+          setConversationId(existingConv.id);
+          // Estimate step from message count
+          setConversationStep(Math.floor(existingConv.messages.length / 2));
+          console.log("Resumed conversation", existingConv.id);
+        } else {
+          // Start fresh conversation
+          const initialMsg: Message = {
+            role: "assistant",
+            content: INITIAL_MESSAGE,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages([initialMsg]);
+        }
+      } catch (error) {
+        // No existing conversation, start fresh
+        const initialMsg: Message = {
+          role: "assistant",
+          content: INITIAL_MESSAGE,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([initialMsg]);
+      } finally {
+        setLoadingConversation(false);
+      }
+    };
+    
+    loadExistingConversation();
+  }, [user, supabase]);
 
   // Check for voice support
   useEffect(() => {
@@ -133,7 +227,8 @@ export default function OnboardingPage() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
@@ -145,7 +240,7 @@ export default function OnboardingPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [...messages, userMessage],
+            messages: updatedMessages,
             current_step: conversationStep,
             extracted_data: extractedData,
           }),
@@ -173,10 +268,20 @@ export default function OnboardingPage() {
         content: data.response,
         timestamp: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const allMessages = [...updatedMessages, assistantMessage];
+      setMessages(allMessages);
       
       // Update step
-      setConversationStep(data.next_step);
+      const newStep = data.next_step;
+      setConversationStep(newStep);
+
+      // SAVE CONVERSATION PROGRESS after each exchange!
+      await saveConversationProgress(
+        allMessages, 
+        newExtractedData, 
+        newStep,
+        data.is_complete ? "completed" : "in_progress"
+      );
 
       // Check if conversation is complete - use accumulated data!
       if (data.is_complete) {
@@ -273,10 +378,12 @@ export default function OnboardingPage() {
     }
 
     setExtractedData(newData);
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: response, timestamp: new Date().toISOString() },
-    ]);
+    const assistantMsg: Message = { role: "assistant", content: response, timestamp: new Date().toISOString() };
+    const allMsgs = [...messages, { role: "user" as const, content: userInput, timestamp: new Date().toISOString() }, assistantMsg];
+    setMessages(allMsgs);
+    
+    // Save fallback progress too
+    saveConversationProgress(allMsgs, newData, step + 1, step >= 4 ? "completed" : "in_progress");
   };
 
   const saveProfile = async (data: ExtractedData) => {
@@ -352,6 +459,18 @@ export default function OnboardingPage() {
       handleSend();
     }
   };
+
+  // Show loading while fetching conversation
+  if (loadingConversation) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-stone-500">Loading your conversation...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
