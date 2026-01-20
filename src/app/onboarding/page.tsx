@@ -157,8 +157,14 @@ export default function OnboardingPage() {
       const data = await response.json();
       
       // Update extracted data
+      const newExtractedData = { ...extractedData };
       if (data.extracted_data) {
-        setExtractedData((prev) => ({ ...prev, ...data.extracted_data }));
+        Object.entries(data.extracted_data).forEach(([key, value]) => {
+          if (value !== null && value !== "" && !(Array.isArray(value) && value.length === 0)) {
+            (newExtractedData as Record<string, unknown>)[key] = value;
+          }
+        });
+        setExtractedData(newExtractedData);
       }
 
       // Add assistant response
@@ -172,9 +178,9 @@ export default function OnboardingPage() {
       // Update step
       setConversationStep(data.next_step);
 
-      // Check if conversation is complete
+      // Check if conversation is complete - use accumulated data!
       if (data.is_complete) {
-        await saveProfile(data.extracted_data);
+        await saveProfile(newExtractedData);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -277,35 +283,24 @@ export default function OnboardingPage() {
     if (!user) return;
 
     try {
-      // Use any to bypass type checking for new tables not yet in Database type
-      const client = supabase as unknown as {
-        from: (table: string) => {
-          update: (data: Record<string, unknown>) => {
-            eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-          };
-        };
-      };
+      // Update user's full name and mark onboarding complete
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: userError } = await (supabase as any)
+        .from("users")
+        .update({ 
+          full_name: data.full_name || user.full_name,
+          onboarding_complete: true 
+        })
+        .eq("id", user.id);
+      
+      if (userError) console.error("User update error:", userError);
 
-      // Update user's full name if extracted
-      if (data.full_name) {
-        await client
-          .from("users")
-          .update({ 
-            full_name: data.full_name,
-            onboarding_complete: true 
-          })
-          .eq("id", user.id);
-      } else {
-        await client
-          .from("users")
-          .update({ onboarding_complete: true })
-          .eq("id", user.id);
-      }
-
-      // Update academic profile
-      await client
+      // Upsert academic profile (creates if not exists, updates if exists)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (supabase as any)
         .from("academic_profiles")
-        .update({
+        .upsert({
+          user_id: user.id,
           nationality: data.nationality,
           country_of_residence: data.country_of_residence,
           current_education_level: data.current_education_level,
@@ -320,8 +315,11 @@ export default function OnboardingPage() {
           circumstances: data.circumstances || {},
           profile_completeness: calculateCompleteness(data),
           ai_extracted: true,
-        })
-        .eq("user_id", user.id);
+        }, {
+          onConflict: "user_id"
+        });
+
+      if (profileError) console.error("Profile upsert error:", profileError);
 
       await refreshUser();
       
