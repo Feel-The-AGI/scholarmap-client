@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -56,7 +56,29 @@ const levelConfig: Record<string, { icon: string; color: string; bg: string }> =
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://scholarmap-agent.onrender.com";
 
+// Loading fallback for Suspense
+function QualifyPageLoading() {
+  return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-stone-500">Loading eligibility checker...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main page wrapper with Suspense
 export default function QualifyPage() {
+  return (
+    <Suspense fallback={<QualifyPageLoading />}>
+      <QualifyPageContent />
+    </Suspense>
+  );
+}
+
+// Actual page content that uses useSearchParams
+function QualifyPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const supabase = createClient();
