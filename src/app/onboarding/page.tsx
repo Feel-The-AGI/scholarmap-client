@@ -144,7 +144,38 @@ export default function OnboardingPage() {
     }
   }, [initAudioContext]);
 
-  // Speak text using Gemini TTS
+  // Browser TTS fallback
+  const speakWithBrowserTTS = useCallback((text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.1;
+    utterance.volume = 1.0;
+    
+    // Try to find a good English female voice
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v => 
+      v.lang.startsWith("en") && 
+      (v.name.toLowerCase().includes("female") || 
+       v.name.includes("Samantha") || 
+       v.name.includes("Victoria") ||
+       v.name.includes("Zira"))
+    ) || voices.find(v => v.lang.startsWith("en"));
+    
+    if (femaleVoice) utterance.voice = femaleVoice;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  // Speak text using Gemini TTS (with browser TTS fallback)
   const speak = useCallback(async (text: string) => {
     if (!ttsEnabled || !text.trim()) return;
     
@@ -152,6 +183,9 @@ export default function OnboardingPage() {
     if (currentSourceRef.current) {
       currentSourceRef.current.stop();
       currentSourceRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
     
     setTtsLoading(true);
@@ -164,7 +198,7 @@ export default function OnboardingPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: text,
-            voice: "Aoede", // Warm, friendly female voice for Ada
+            voice: "Aoede",
             style: "warmly and conversationally",
           }),
         }
@@ -178,20 +212,27 @@ export default function OnboardingPage() {
       
       if (data.audio_base64) {
         await playPCMAudio(data.audio_base64);
+      } else {
+        throw new Error("No audio data");
       }
     } catch (error) {
-      console.error("TTS error:", error);
-      // Silently fail - user can still read the text
+      console.warn("Gemini TTS failed, using browser TTS:", error);
+      // Fallback to browser TTS
+      speakWithBrowserTTS(text);
     } finally {
       setTtsLoading(false);
     }
-  }, [ttsEnabled, playPCMAudio]);
+  }, [ttsEnabled, playPCMAudio, speakWithBrowserTTS]);
 
   // Stop speaking
   const stopSpeaking = useCallback(() => {
     if (currentSourceRef.current) {
       currentSourceRef.current.stop();
       currentSourceRef.current = null;
+    }
+    // Also stop browser TTS
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
   }, []);
