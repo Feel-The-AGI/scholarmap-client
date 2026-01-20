@@ -444,7 +444,7 @@ export default function OnboardingPage() {
                 onKeyPress={handleKeyPress}
                 placeholder={isListening ? "Listening..." : "Type your message..."}
                 disabled={loading || isListening}
-                className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-primary-500 focus:ring-0 transition-colors pr-12"
+                className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-primary-500 focus:ring-0 transition-colors pr-12 text-stone-900 placeholder:text-stone-400 bg-white"
               />
             </div>
 
