@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
 
 type UserProfile = {
   nationality: string;
@@ -54,6 +57,11 @@ const levelConfig: Record<string, { icon: string; color: string; bg: string }> =
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://scholarmap-agent.onrender.com";
 
 export default function QualifyPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+  const fromOnboarding = searchParams.get("from") === "onboarding";
+  
   const [form, setForm] = useState<UserProfile>({
     nationality: "",
     age: null,
@@ -70,12 +78,14 @@ export default function QualifyPage() {
   });
   const [results, setResults] = useState<EligibilityResults | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Check eligibility function
+  const runEligibilityCheck = useCallback(async (profile: UserProfile) => {
     setLoading(true);
     setError(null);
 
@@ -85,7 +95,7 @@ export default function QualifyPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ profile: form }),
+        body: JSON.stringify({ profile }),
       });
 
       if (!response.ok) {
@@ -100,6 +110,72 @@ export default function QualifyPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Load profile from Supabase on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      try {
+        console.log("Loading academic profile for user:", user.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile, error: profileError } = await (supabase as any)
+          .from("academic_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileError) {
+          console.log("No profile found:", profileError);
+          setLoadingProfile(false);
+          return;
+        }
+
+        if (profile) {
+          console.log("Loaded profile:", profile);
+          
+          // Map academic_profiles data to form structure
+          const loadedForm: UserProfile = {
+            nationality: profile.nationality || "",
+            age: null, // Calculate from date_of_birth if needed
+            degree: profile.current_education_level || "",
+            target_degree: profile.target_degree || "",
+            gpa: profile.gpa,
+            field_of_study: profile.target_fields?.join(", ") || "",
+            work_experience_years: profile.work_experience_years || 0,
+            languages: profile.languages?.map((l: { language: string }) => l.language) || [],
+            has_financial_need: profile.circumstances?.financial_need ?? null,
+            is_refugee: profile.circumstances?.refugee ?? false,
+            has_disability: profile.circumstances?.disability ?? false,
+            additional_info: "",
+          };
+
+          setForm(loadedForm);
+          setProfileLoaded(true);
+          
+          // If coming from onboarding AND we have a profile, auto-run check
+          if (fromOnboarding && profile.nationality) {
+            console.log("Auto-running eligibility check from onboarding...");
+            runEligibilityCheck(loadedForm);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, [user, supabase, fromOnboarding, runEligibilityCheck]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    runEligibilityCheck(form);
   };
 
   // Count is available for future use
@@ -296,6 +372,42 @@ export default function QualifyPage() {
       {/* Form */}
       <div className="px-6 pb-24">
         <div className="max-w-4xl mx-auto">
+          {/* Loading profile indicator */}
+          {loadingProfile && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-center py-12"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-stone-500">Loading your profile...</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Show profile loaded indicator when coming from onboarding */}
+          {!loadingProfile && fromOnboarding && profileLoaded && loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl bg-green-50 border border-green-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-green-800">Profile loaded from onboarding!</p>
+                  <p className="text-sm text-green-600">Analyzing scholarships for you...</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {!loadingProfile && (
           <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -631,6 +743,7 @@ export default function QualifyPage() {
               )}
             </AnimatePresence>
           </motion.form>
+          )}
 
           {/* Error */}
           {error && (
