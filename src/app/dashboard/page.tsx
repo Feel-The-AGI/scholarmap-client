@@ -1,14 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, academicProfile, subscription, loading, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle URL error (e.g., from failed OAuth)
+  useEffect(() => {
+    if (urlError) {
+      setError(decodeURIComponent(urlError).replace(/\+/g, " "));
+      // Clear error from URL without refresh
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [urlError]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -64,6 +76,33 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Authentication error: {error}</span>
+              </div>
+              <button 
+                onClick={() => setError(null)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="mt-2 text-sm">Please try signing in again. If the problem persists, try clearing your browser cookies.</p>
+          </motion.div>
+        )}
+
         {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -224,5 +263,23 @@ export default function DashboardPage() {
         )}
       </main>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function DashboardLoading() {
+  return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+    </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
