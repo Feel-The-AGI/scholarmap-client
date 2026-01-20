@@ -258,14 +258,24 @@ export default function OnboardingPage() {
       clearLocalStorage(); // Clear on completion
     }
     
-    // ASYNC: Save to database (can be slower)
+    // ASYNC: Save to database (can be slower, and may fail - that's OK)
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase as any;
       
+      // First, ensure user exists in public.users (required for foreign key)
+      // This handles the case where the auth trigger hasn't run yet
+      await client
+        .from("users")
+        .upsert({
+          id: user.id,
+          email: user.email || "",
+          full_name: data.full_name || user.full_name || null,
+        }, { onConflict: "id" });
+      
       if (conversationId) {
         // Update existing conversation
-        await client
+        const { error } = await client
           .from("onboarding_conversations")
           .update({
             messages: msgs,
@@ -273,9 +283,13 @@ export default function OnboardingPage() {
             completion_status: status,
           })
           .eq("id", conversationId);
+        
+        if (error) {
+          console.warn("Conversation update failed (localStorage backup active):", error.message);
+        }
       } else {
         // Create new conversation
-        const { data: newConv } = await client
+        const { data: newConv, error } = await client
           .from("onboarding_conversations")
           .insert({
             user_id: user.id,
@@ -286,13 +300,16 @@ export default function OnboardingPage() {
           .select("id")
           .single();
         
-        if (newConv?.id) {
+        if (error) {
+          console.warn("Conversation insert failed (localStorage backup active):", error.message);
+        } else if (newConv?.id) {
           setConversationId(newConv.id);
         }
       }
       console.log("Conversation saved at step", step);
     } catch (error) {
-      console.error("Error saving conversation:", error);
+      // Don't break the flow - localStorage has the backup
+      console.warn("Database save failed (localStorage backup active):", error);
     }
   }, [user, supabase, conversationId, saveToLocalStorage, clearLocalStorage]);
 
