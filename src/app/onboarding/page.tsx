@@ -584,23 +584,23 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
+    <div className="h-screen h-[100dvh] bg-stone-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-stone-200 px-4 py-4">
+      <header className="flex-shrink-0 bg-white border-b border-stone-200 px-4 py-3 sm:py-4">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold">A</span>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm sm:text-base">A</span>
           </div>
-          <div>
-            <h1 className="font-semibold text-stone-900">Ada</h1>
-            <p className="text-xs text-stone-500">Your Scholarship Advisor</p>
+          <div className="min-w-0">
+            <h1 className="font-semibold text-stone-900 text-sm sm:text-base">Ada</h1>
+            <p className="text-xs text-stone-500 truncate">Your Scholarship Advisor</p>
           </div>
         </div>
       </header>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto space-y-4">
+      {/* Chat Area - scrollable */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 min-h-0">
+        <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
               <motion.div
@@ -611,7 +611,7 @@ export default function OnboardingPage() {
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 ${
                     message.role === "user"
                       ? "bg-primary-500 text-white rounded-br-md"
                       : "bg-white shadow-md shadow-stone-200/50 text-stone-900 rounded-bl-md"
@@ -629,7 +629,7 @@ export default function OnboardingPage() {
               animate={{ opacity: 1 }}
               className="flex justify-start"
             >
-              <div className="bg-white shadow-md shadow-stone-200/50 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="bg-white shadow-md shadow-stone-200/50 rounded-2xl rounded-bl-md px-3 sm:px-4 py-2 sm:py-3">
                 {isCompleting ? (
                   <p className="text-stone-600 text-sm">Finding your scholarships...</p>
                 ) : (
@@ -647,21 +647,21 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="bg-white border-t border-stone-200 px-4 py-4">
+      {/* Input Area - fixed at bottom */}
+      <div className="flex-shrink-0 bg-white border-t border-stone-200 px-3 sm:px-4 py-3 sm:py-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-2">
             {/* Voice Button */}
             {voiceSupported && (
               <button
                 onClick={isListening ? stopListening : startListening}
-                className={`p-3 rounded-xl transition-all ${
+                className={`p-2 sm:p-3 rounded-xl transition-all flex-shrink-0 ${
                   isListening
                     ? "bg-red-500 text-white animate-pulse"
                     : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </button>
@@ -676,7 +676,7 @@ export default function OnboardingPage() {
                 onKeyPress={handleKeyPress}
                 placeholder={isListening ? "Listening..." : "Type your message..."}
                 disabled={loading || isListening}
-                className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-primary-500 focus:ring-0 transition-colors pr-12 text-stone-900 placeholder:text-stone-400 bg-white"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-2 border-stone-200 focus:border-primary-500 focus:ring-0 transition-colors pr-12 text-stone-900 placeholder:text-stone-400 bg-white text-sm sm:text-base"
               />
             </div>
 
@@ -684,15 +684,15 @@ export default function OnboardingPage() {
             <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              className="p-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="p-2 sm:p-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
           </div>
           
-          <p className="text-xs text-stone-500 text-center mt-2">
+          <p className="text-xs text-stone-500 text-center mt-2 hidden sm:block">
             {voiceSupported ? "Tap the microphone to speak, or type your response" : "Type your response and press Enter"}
           </p>
         </div>
