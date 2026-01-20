@@ -71,7 +71,53 @@ export default function OnboardingPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
-  // Save conversation progress to database
+  // LocalStorage key for this user
+  const localStorageKey = user ? `scholarmap_onboarding_${user.id}` : null;
+
+  // Save to localStorage (instant, no network)
+  const saveToLocalStorage = useCallback((msgs: Message[], data: ExtractedData, step: number) => {
+    if (!localStorageKey) return;
+    try {
+      localStorage.setItem(localStorageKey, JSON.stringify({
+        messages: msgs,
+        extracted_data: data,
+        step: step,
+        timestamp: Date.now(),
+      }));
+    } catch (e) {
+      console.warn("LocalStorage save failed:", e);
+    }
+  }, [localStorageKey]);
+
+  // Load from localStorage
+  const loadFromLocalStorage = useCallback((): { messages: Message[], extracted_data: ExtractedData, step: number } | null => {
+    if (!localStorageKey) return null;
+    try {
+      const cached = localStorage.getItem(localStorageKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        // Only use if less than 24 hours old
+        if (data.timestamp && Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn("LocalStorage load failed:", e);
+    }
+    return null;
+  }, [localStorageKey]);
+
+  // Clear localStorage on completion
+  const clearLocalStorage = useCallback(() => {
+    if (!localStorageKey) return;
+    try {
+      localStorage.removeItem(localStorageKey);
+    } catch (e) {
+      console.warn("LocalStorage clear failed:", e);
+    }
+  }, [localStorageKey]);
+
+  // Save conversation progress to database + localStorage
   const saveConversationProgress = useCallback(async (
     msgs: Message[], 
     data: ExtractedData, 
@@ -80,6 +126,14 @@ export default function OnboardingPage() {
   ) => {
     if (!user) return;
     
+    // INSTANT: Save to localStorage first (no network delay)
+    if (status !== "completed") {
+      saveToLocalStorage(msgs, data, step);
+    } else {
+      clearLocalStorage(); // Clear on completion
+    }
+    
+    // ASYNC: Save to database (can be slower)
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase as any;
@@ -115,7 +169,7 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error("Error saving conversation:", error);
     }
-  }, [user, supabase, conversationId]);
+  }, [user, supabase, conversationId, saveToLocalStorage, clearLocalStorage]);
 
   // Load existing conversation on mount
   useEffect(() => {
@@ -125,6 +179,37 @@ export default function OnboardingPage() {
         return;
       }
       
+      // FAST PATH: Check localStorage first (instant, no network)
+      const cachedConv = loadFromLocalStorage();
+      if (cachedConv && cachedConv.messages?.length > 0) {
+        setMessages(cachedConv.messages);
+        setExtractedData(cachedConv.extracted_data || {});
+        setConversationStep(cachedConv.step || Math.floor(cachedConv.messages.length / 2));
+        console.log("Restored from localStorage (instant)");
+        setLoadingConversation(false);
+        
+        // Background: sync with database to get conversationId
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: existingConv } = await (supabase as any)
+            .from("onboarding_conversations")
+            .select("id")
+            .eq("user_id", user.id)
+            .neq("completion_status", "completed")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (existingConv?.id) {
+            setConversationId(existingConv.id);
+          }
+        } catch (e) {
+          // Will create new on next save
+        }
+        return;
+      }
+      
+      // SLOW PATH: Fetch from database
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: existingConv } = await (supabase as any)
@@ -141,9 +226,10 @@ export default function OnboardingPage() {
           setMessages(existingConv.messages);
           setExtractedData(existingConv.extracted_data || {});
           setConversationId(existingConv.id);
-          // Estimate step from message count
           setConversationStep(Math.floor(existingConv.messages.length / 2));
-          console.log("Resumed conversation", existingConv.id);
+          // Also cache to localStorage
+          saveToLocalStorage(existingConv.messages, existingConv.extracted_data || {}, Math.floor(existingConv.messages.length / 2));
+          console.log("Resumed from database", existingConv.id);
         } else {
           // Start fresh conversation
           const initialMsg: Message = {
@@ -167,7 +253,7 @@ export default function OnboardingPage() {
     };
     
     loadExistingConversation();
-  }, [user, supabase]);
+  }, [user, supabase, loadFromLocalStorage, saveToLocalStorage]);
 
   // Check for voice support
   useEffect(() => {
