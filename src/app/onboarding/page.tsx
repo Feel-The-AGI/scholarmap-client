@@ -487,16 +487,19 @@ export default function OnboardingPage() {
     setIsCompleting(true);
 
     try {
-      // Try to update user's full name and mark onboarding complete
-      console.log("Attempting to update users table...");
+      // Try to upsert user row (create if doesn't exist)
+      console.log("Attempting to upsert users table...");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: userError } = await (supabase as any)
         .from("users")
-        .update({ 
+        .upsert({ 
+          id: user.id,
+          email: user.email,
           full_name: data.full_name || user.full_name,
           onboarding_complete: true 
-        })
-        .eq("id", user.id);
+        }, {
+          onConflict: "id"
+        });
       
       if (userError) {
         console.error("User update error (continuing anyway):", userError);
