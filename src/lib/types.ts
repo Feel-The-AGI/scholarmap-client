@@ -140,3 +140,131 @@ export type EligibilityRule = Database["public"]["Tables"]["eligibility_rules"][
 export type Requirement = Database["public"]["Tables"]["requirements"]["Row"];
 export type Deadline = Database["public"]["Tables"]["deadlines"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+// ============================================
+// V2 User System Types
+// ============================================
+
+export type SubscriptionTier = "free" | "pro" | "premium";
+export type EducationLevel = "high_school" | "undergraduate" | "graduate" | "professional";
+export type TargetDegree = "bachelor" | "masters" | "phd" | "postdoc";
+export type OnboardingStatus = "started" | "in_progress" | "completed" | "abandoned";
+export type SubscriptionStatus = "active" | "cancelled" | "past_due" | "trialing";
+export type ApplicationStatus = "interested" | "applying" | "submitted" | "accepted" | "rejected";
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  onboarding_complete: boolean;
+  subscription_tier: SubscriptionTier;
+  created_at: string;
+  last_active_at: string;
+}
+
+export interface Language {
+  language: string;
+  proficiency: "native" | "fluent" | "intermediate" | "basic";
+  test_scores?: {
+    test: string;
+    score: string;
+  };
+}
+
+export interface Circumstances {
+  financial_need?: boolean;
+  refugee?: boolean;
+  disability?: boolean;
+  first_gen?: boolean;
+}
+
+export interface AcademicProfile {
+  id: string;
+  user_id: string;
+  nationality: string | null;
+  country_of_residence: string | null;
+  date_of_birth: string | null;
+  current_education_level: EducationLevel | null;
+  current_institution: string | null;
+  graduation_year: number | null;
+  gpa: number | null;
+  target_degree: TargetDegree | null;
+  target_fields: string[];
+  preferred_countries: string[];
+  work_experience_years: number;
+  languages: Language[];
+  achievements: string[];
+  circumstances: Circumstances;
+  profile_completeness: number;
+  ai_extracted: boolean;
+  last_conversation_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnboardingConversation {
+  id: string;
+  user_id: string;
+  messages: ChatMessage[];
+  extracted_data: Partial<AcademicProfile>;
+  completion_status: OnboardingStatus;
+  duration_seconds: number;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  tier: SubscriptionTier;
+  status: SubscriptionStatus;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
+}
+
+export interface SavedScholarship {
+  id: string;
+  user_id: string;
+  program_id: string;
+  notes: string | null;
+  reminder_date: string | null;
+  created_at: string;
+  program?: Program; // Joined data
+}
+
+export interface Application {
+  id: string;
+  user_id: string;
+  program_id: string;
+  status: ApplicationStatus;
+  deadline: string | null;
+  submitted_at: string | null;
+  notes: string | null;
+  documents: { name: string; url: string }[];
+  created_at: string;
+  updated_at: string;
+  program?: Program; // Joined data
+}
+
+export interface EligibilityCheck {
+  id: string;
+  user_id: string | null;
+  results_summary: {
+    eligible_count: number;
+    likely_count: number;
+    maybe_count: number;
+    total_analyzed: number;
+  } | null;
+  programs_matched: number;
+  created_at: string;
+}
