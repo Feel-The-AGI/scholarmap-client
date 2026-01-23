@@ -6,22 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 
-// SpeechRecognition type declaration
-interface SpeechRecognitionEvent {
-  results: { [index: number]: { [index: number]: { transcript: string } } };
-}
-
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-}
-
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -49,756 +33,339 @@ interface ExtractedData {
   };
 }
 
-const INITIAL_MESSAGE = `Hey there! I'm Ada, your scholarship advisor. Let's chat for a couple of minutes so I can find the perfect scholarships for you.
-
-What's your name and where are you from?`;
-
 export default function OnboardingPage() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
   const supabase = createClient();
   
+  // Connection state
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  
+  // Conversation state
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingConversation, setLoadingConversation] = useState(true);
+  const [currentTranscript, setCurrentTranscript] = useState("");
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
-  const [conversationStep, setConversationStep] = useState(0);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  
+  // Audio state
   const [isListening, setIsListening] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  
-  // TTS State
-  const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [ttsLoading, setTtsLoading] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  // Refs
+  const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioQueueRef = useRef<ArrayBuffer[]>([]);
+  const isPlayingRef = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize AudioContext on user interaction
+  // Initialize AudioContext
   const initAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
-    // Resume if suspended (needed for autoplay policies)
     if (audioContextRef.current.state === "suspended") {
       audioContextRef.current.resume();
     }
     return audioContextRef.current;
   }, []);
 
-  // Convert PCM base64 to playable audio buffer
-  const playPCMAudio = useCallback(async (base64Data: string) => {
-    try {
-      const audioContext = initAudioContext();
+  // Play PCM audio from queue
+  const playNextAudio = useCallback(async () => {
+    if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
+    
+    isPlayingRef.current = true;
+    setIsSpeaking(true);
+    
+    const audioContext = initAudioContext();
+    
+    while (audioQueueRef.current.length > 0) {
+      const audioData = audioQueueRef.current.shift()!;
       
-      // Decode base64 to raw bytes
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      try {
+        // Convert PCM to audio buffer (24kHz, 16-bit, mono)
+        const bytes = new Uint8Array(audioData);
+        const numSamples = bytes.length / 2;
+        const audioBuffer = audioContext.createBuffer(1, numSamples, 24000);
+        const channelData = audioBuffer.getChannelData(0);
+        
+        const dataView = new DataView(audioData);
+        for (let i = 0; i < numSamples; i++) {
+          const int16 = dataView.getInt16(i * 2, true);
+          channelData[i] = int16 / 32768;
+        }
+        
+        // Play buffer
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        
+        await new Promise<void>((resolve) => {
+          source.onended = () => resolve();
+          source.start();
+        });
+      } catch (e) {
+        console.error("Error playing audio:", e);
       }
-      
-      // PCM is 16-bit signed little-endian, 24kHz, mono
-      const sampleRate = 24000;
-      const numSamples = bytes.length / 2; // 2 bytes per sample
-      
-      // Create audio buffer
-      const audioBuffer = audioContext.createBuffer(1, numSamples, sampleRate);
-      const channelData = audioBuffer.getChannelData(0);
-      
-      // Convert PCM to float samples
-      const dataView = new DataView(bytes.buffer);
-      for (let i = 0; i < numSamples; i++) {
-        const int16 = dataView.getInt16(i * 2, true); // little-endian
-        channelData[i] = int16 / 32768; // Normalize to -1.0 to 1.0
-      }
-      
-      // Stop any currently playing audio
-      if (currentSourceRef.current) {
-        currentSourceRef.current.stop();
-        currentSourceRef.current = null;
-      }
-      
-      // Create and play source node
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      
-      source.onended = () => {
-        setIsSpeaking(false);
-        currentSourceRef.current = null;
-      };
-      
-      currentSourceRef.current = source;
-      source.start();
-      setIsSpeaking(true);
-      
-    } catch (error) {
-      console.error("Error playing PCM audio:", error);
-      setIsSpeaking(false);
     }
+    
+    isPlayingRef.current = false;
+    setIsSpeaking(false);
   }, [initAudioContext]);
 
-  // Browser TTS fallback
-  const speakWithBrowserTTS = useCallback((text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  // Connect to Live API
+  const connect = useCallback(async () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1;
-    utterance.volume = 1.0;
-    
-    // Try to find a good English female voice
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => 
-      v.lang.startsWith("en") && 
-      (v.name.toLowerCase().includes("female") || 
-       v.name.includes("Samantha") || 
-       v.name.includes("Victoria") ||
-       v.name.includes("Zira"))
-    ) || voices.find(v => v.lang.startsWith("en"));
-    
-    if (femaleVoice) utterance.voice = femaleVoice;
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    
-    window.speechSynthesis.speak(utterance);
-  }, []);
-
-  // Speak text using Gemini TTS (with browser TTS fallback)
-  const speak = useCallback(async (text: string) => {
-    if (!ttsEnabled || !text.trim()) return;
-    
-    // Stop any current speech first
-    if (currentSourceRef.current) {
-      currentSourceRef.current.stop();
-      currentSourceRef.current = null;
-    }
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    
-    setTtsLoading(true);
+    setIsConnecting(true);
+    setConnectionError(null);
     
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/tts`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            voice: "Kore", // Kore - confirmed working female voice in Gemini TTS docs
-            style: "warmly and conversationally",
-          }),
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
         }
-      );
+      });
+      mediaStreamRef.current = stream;
       
-      if (!response.ok) {
-        throw new Error("TTS request failed");
-      }
+      // Connect to WebSocket
+      const wsUrl = (process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com")
+        .replace("https://", "wss://")
+        .replace("http://", "ws://");
       
-      const data = await response.json();
+      const ws = new WebSocket(`${wsUrl}/live/ada`);
+      wsRef.current = ws;
       
-      if (data.audio_base64) {
-        await playPCMAudio(data.audio_base64);
-      } else {
-        throw new Error("No audio data");
-      }
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        setIsConnected(true);
+        setIsConnecting(false);
+        
+        // Start audio processing
+        startAudioProcessing(stream);
+      };
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === "audio") {
+          // Queue audio for playback
+          const audioData = Uint8Array.from(atob(data.data), c => c.charCodeAt(0)).buffer;
+          audioQueueRef.current.push(audioData);
+          playNextAudio();
+        } else if (data.type === "transcript") {
+          // Update current transcript (Ada's response)
+          setCurrentTranscript(data.data);
+        } else if (data.type === "turn_complete") {
+          // Ada finished speaking - add to messages
+          if (currentTranscript) {
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: currentTranscript,
+              timestamp: new Date().toISOString()
+            }]);
+            setCurrentTranscript("");
+          }
+        } else if (data.type === "error") {
+          console.error("Server error:", data.data);
+          setConnectionError(data.data);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setConnectionError("Connection error");
+        setIsConnecting(false);
+      };
+      
+      ws.onclose = () => {
+        console.log("WebSocket closed");
+        setIsConnected(false);
+        stopAudioProcessing();
+      };
+      
     } catch (error) {
-      console.warn("Gemini TTS failed, using browser TTS:", error);
-      // Fallback to browser TTS
-      speakWithBrowserTTS(text);
-    } finally {
-      setTtsLoading(false);
+      console.error("Connection failed:", error);
+      setConnectionError(error instanceof Error ? error.message : "Failed to connect");
+      setIsConnecting(false);
     }
-  }, [ttsEnabled, playPCMAudio, speakWithBrowserTTS]);
+  }, [playNextAudio, currentTranscript]);
 
-  // Stop speaking
-  const stopSpeaking = useCallback(() => {
-    if (currentSourceRef.current) {
-      currentSourceRef.current.stop();
-      currentSourceRef.current = null;
+  // Start processing microphone audio
+  const startAudioProcessing = useCallback((stream: MediaStream) => {
+    const audioContext = initAudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    
+    // Create analyzer for audio level visualization
+    const analyzer = audioContext.createAnalyser();
+    analyzer.fftSize = 256;
+    source.connect(analyzer);
+    
+    // Create processor to send audio to WebSocket
+    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+    processorRef.current = processor;
+    
+    processor.onaudioprocess = (e) => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !isListening) return;
+      
+      const inputData = e.inputBuffer.getChannelData(0);
+      
+      // Calculate audio level
+      let sum = 0;
+      for (let i = 0; i < inputData.length; i++) {
+        sum += inputData[i] * inputData[i];
+      }
+      setAudioLevel(Math.sqrt(sum / inputData.length) * 10);
+      
+      // Resample from AudioContext sample rate to 16kHz
+      const targetSampleRate = 16000;
+      const ratio = audioContext.sampleRate / targetSampleRate;
+      const newLength = Math.round(inputData.length / ratio);
+      const resampledData = new Int16Array(newLength);
+      
+      for (let i = 0; i < newLength; i++) {
+        const srcIndex = Math.round(i * ratio);
+        const sample = Math.max(-1, Math.min(1, inputData[srcIndex] || 0));
+        resampledData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+      }
+      
+      // Send to WebSocket as base64
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(resampledData.buffer)));
+      wsRef.current.send(JSON.stringify({ type: "audio", data: base64 }));
+    };
+    
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+    
+    // Audio level animation
+    const updateLevel = () => {
+      if (!analyzer) return;
+      const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+      analyzer.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setAudioLevel(avg / 255);
+      if (isConnected) requestAnimationFrame(updateLevel);
+    };
+    requestAnimationFrame(updateLevel);
+  }, [initAudioContext, isListening, isConnected]);
+
+  // Stop audio processing
+  const stopAudioProcessing = useCallback(() => {
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
     }
-    // Also stop browser TTS
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
     }
-    setIsSpeaking(false);
   }, []);
 
-  // LocalStorage key for this user
-  const localStorageKey = user ? `scholarmap_onboarding_${user.id}` : null;
-
-  // Save to localStorage (instant, no network)
-  const saveToLocalStorage = useCallback((msgs: Message[], data: ExtractedData, step: number) => {
-    if (!localStorageKey) return;
-    try {
-      localStorage.setItem(localStorageKey, JSON.stringify({
-        messages: msgs,
-        extracted_data: data,
-        step: step,
-        timestamp: Date.now(),
-      }));
-    } catch (e) {
-      console.warn("LocalStorage save failed:", e);
+  // Toggle listening
+  const toggleListening = useCallback(() => {
+    if (!isConnected) {
+      connect();
+      return;
     }
-  }, [localStorageKey]);
+    setIsListening(prev => !prev);
+  }, [isConnected, connect]);
 
-  // Load from localStorage
-  const loadFromLocalStorage = useCallback((): { messages: Message[], extracted_data: ExtractedData, step: number } | null => {
-    if (!localStorageKey) return null;
-    try {
-      const cached = localStorage.getItem(localStorageKey);
-      if (cached) {
-        const data = JSON.parse(cached);
-        // Only use if less than 24 hours old
-        if (data.timestamp && Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn("LocalStorage load failed:", e);
-    }
-    return null;
-  }, [localStorageKey]);
-
-  // Clear localStorage on completion
-  const clearLocalStorage = useCallback(() => {
-    if (!localStorageKey) return;
-    try {
-      localStorage.removeItem(localStorageKey);
-    } catch (e) {
-      console.warn("LocalStorage clear failed:", e);
-    }
-  }, [localStorageKey]);
-
-  // Save conversation progress to database + localStorage
-  const saveConversationProgress = useCallback(async (
-    msgs: Message[], 
-    data: ExtractedData, 
-    step: number,
-    status: "started" | "in_progress" | "completed" = "in_progress"
-  ) => {
-    if (!user) return;
+  // Send text message
+  const sendTextMessage = useCallback((text: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     
-    // INSTANT: Save to localStorage first (no network delay)
-    if (status !== "completed") {
-      saveToLocalStorage(msgs, data, step);
-    } else {
-      clearLocalStorage(); // Clear on completion
-    }
+    // Add user message
+    setMessages(prev => [...prev, {
+      role: "user",
+      content: text,
+      timestamp: new Date().toISOString()
+    }]);
     
-    // ASYNC: Save to database (can be slower, and may fail - that's OK)
+    // Send to WebSocket
+    wsRef.current.send(JSON.stringify({ type: "text", data: text }));
+  }, []);
+
+  // Disconnect
+  const disconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    stopAudioProcessing();
+    setIsConnected(false);
+    setIsListening(false);
+  }, [stopAudioProcessing]);
+
+  // Save profile when conversation is complete
+  const saveProfile = useCallback(async () => {
+    if (!user || isCompleting) return;
+    
+    setIsCompleting(true);
+    
     try {
+      // Parse extracted data from conversation (simplified - would need NLP in production)
+      const profileData = {
+        user_id: user.id,
+        ...extractedData,
+      };
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = supabase as any;
       
-      // First, ensure user exists in public.users (required for foreign key)
-      // This handles the case where the auth trigger hasn't run yet
+      // Save to database
+      const { error } = await client
+        .from("academic_profiles")
+        .upsert(profileData, { onConflict: "user_id" });
+      
+      if (error) throw error;
+      
+      // Update user's onboarding status
       await client
         .from("users")
-        .upsert({
-          id: user.id,
-          email: user.email || "",
-          full_name: data.full_name || user.full_name || null,
-        }, { onConflict: "id" });
+        .update({ onboarding_complete: true })
+        .eq("id", user.id);
       
-      if (conversationId) {
-        // Update existing conversation
-        const { error } = await client
-          .from("onboarding_conversations")
-          .update({
-            messages: msgs,
-            extracted_data: data,
-            completion_status: status,
-          })
-          .eq("id", conversationId);
-        
-        if (error) {
-          console.warn("Conversation update failed (localStorage backup active):", error.message);
-        }
-      } else {
-        // Create new conversation
-        const { data: newConv, error } = await client
-          .from("onboarding_conversations")
-          .insert({
-            user_id: user.id,
-            messages: msgs,
-            extracted_data: data,
-            completion_status: status,
-          })
-          .select("id")
-          .single();
-        
-        if (error) {
-          console.warn("Conversation insert failed (localStorage backup active):", error.message);
-        } else if (newConv?.id) {
-          setConversationId(newConv.id);
-        }
-      }
-      console.log("Conversation saved at step", step);
+      await refreshUser();
+      router.push("/dashboard");
+      
     } catch (error) {
-      // Don't break the flow - localStorage has the backup
-      console.warn("Database save failed (localStorage backup active):", error);
+      console.error("Failed to save profile:", error);
+    } finally {
+      setIsCompleting(false);
     }
-  }, [user, supabase, conversationId, saveToLocalStorage, clearLocalStorage]);
+  }, [user, extractedData, supabase, refreshUser, router, isCompleting]);
 
-  // Load existing conversation on mount
-  useEffect(() => {
-    const loadExistingConversation = async () => {
-      if (!user) {
-        setLoadingConversation(false);
-        return;
-      }
-      
-      // FAST PATH: Check localStorage first (instant, no network)
-      const cachedConv = loadFromLocalStorage();
-      if (cachedConv && cachedConv.messages?.length > 0) {
-        setMessages(cachedConv.messages);
-        setExtractedData(cachedConv.extracted_data || {});
-        setConversationStep(cachedConv.step || Math.floor(cachedConv.messages.length / 2));
-        console.log("Restored from localStorage (instant)");
-        setLoadingConversation(false);
-        
-        // Background: sync with database to get conversationId
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: existingConv } = await (supabase as any)
-            .from("onboarding_conversations")
-            .select("id")
-            .eq("user_id", user.id)
-            .neq("completion_status", "completed")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (existingConv?.id) {
-            setConversationId(existingConv.id);
-          }
-        } catch (e) {
-          // Will create new on next save
-        }
-        return;
-      }
-      
-      // SLOW PATH: Fetch from database
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: existingConv } = await (supabase as any)
-          .from("onboarding_conversations")
-          .select("*")
-          .eq("user_id", user.id)
-          .neq("completion_status", "completed")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (existingConv && existingConv.messages?.length > 0) {
-          // Resume existing conversation
-          setMessages(existingConv.messages);
-          setExtractedData(existingConv.extracted_data || {});
-          setConversationId(existingConv.id);
-          setConversationStep(Math.floor(existingConv.messages.length / 2));
-          // Also cache to localStorage
-          saveToLocalStorage(existingConv.messages, existingConv.extracted_data || {}, Math.floor(existingConv.messages.length / 2));
-          console.log("Resumed from database", existingConv.id);
-        } else {
-          // Start fresh conversation
-          const initialMsg: Message = {
-            role: "assistant",
-            content: INITIAL_MESSAGE,
-            timestamp: new Date().toISOString(),
-          };
-          setMessages([initialMsg]);
-          // Speak the initial greeting after a short delay
-          setTimeout(() => speak(INITIAL_MESSAGE), 500);
-        }
-      } catch (error) {
-        // No existing conversation, start fresh
-        const initialMsg: Message = {
-          role: "assistant",
-          content: INITIAL_MESSAGE,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages([initialMsg]);
-        // Speak the initial greeting after a short delay
-        setTimeout(() => speak(INITIAL_MESSAGE), 500);
-      } finally {
-        setLoadingConversation(false);
-      }
-    };
-    
-    loadExistingConversation();
-  }, [user, supabase, loadFromLocalStorage, saveToLocalStorage, speak]);
-
-  // Check for voice support
-  useEffect(() => {
-    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
-      setVoiceSupported(true);
-    }
-  }, []);
-
-  // Auto-scroll to bottom
+  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, currentTranscript]);
 
-  const startListening = () => {
-    if (!voiceSupported) return;
-    
-    // Stop Ada from speaking when user wants to talk
-    stopSpeaking();
-    
-    const SpeechRecognitionClass = (window as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || 
-      (window as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
-    if (!SpeechRecognitionClass) return;
-    
-    recognitionRef.current = new SpeechRecognitionClass();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
-    recognitionRef.current.lang = "en-US";
-
-    recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
-      setIsListening(false);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
     };
+  }, [disconnect]);
 
-    recognitionRef.current.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current.start();
-    setIsListening(true);
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-
-    const userMessage: Message = {
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setInput("");
-    setLoading(true);
-
-    try {
-      // Call the backend to process the message and extract data
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_AGENT_URL || "https://scholarmap-agent.onrender.com"}/onboarding/chat`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: updatedMessages,
-            current_step: conversationStep,
-            extracted_data: extractedData,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to get response");
-
-      const data = await response.json();
-      
-      // Update extracted data
-      const newExtractedData = { ...extractedData };
-      if (data.extracted_data) {
-        Object.entries(data.extracted_data).forEach(([key, value]) => {
-          if (value !== null && value !== "" && !(Array.isArray(value) && value.length === 0)) {
-            (newExtractedData as Record<string, unknown>)[key] = value;
-          }
-        });
-        setExtractedData(newExtractedData);
-      }
-
-      // Add assistant response
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.response,
-        timestamp: new Date().toISOString(),
-      };
-      const allMessages = [...updatedMessages, assistantMessage];
-      setMessages(allMessages);
-      
-      // Speak Ada's response
-      speak(data.response);
-      
-      // Update step
-      const newStep = data.next_step;
-      setConversationStep(newStep);
-
-      // SAVE CONVERSATION PROGRESS after each exchange!
-      await saveConversationProgress(
-        allMessages, 
-        newExtractedData, 
-        newStep,
-        data.is_complete ? "completed" : "in_progress"
-      );
-
-      // Check if conversation is complete - use accumulated data!
-      if (data.is_complete) {
-        await saveProfile(newExtractedData);
-      }
-    } catch (error) {
-      console.error("Chat error:", error);
-      // Fallback: continue with simple flow
-      handleSimpleFlow(userMessage.content);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Simple fallback flow if API fails
-  const handleSimpleFlow = (userInput: string) => {
-    const step = conversationStep;
-    let response = "";
-    const newData: ExtractedData = { ...extractedData };
-
-    switch (step) {
-      case 0: { // Name and nationality
-        const parts = userInput.split(/from|,/i);
-        if (parts.length >= 1) newData.full_name = parts[0].replace(/i'm|i am|my name is/i, "").trim();
-        if (parts.length >= 2) newData.nationality = parts[1].trim();
-        response = `Nice to meet you${newData.full_name ? `, ${newData.full_name}` : ""}! What are you currently studying or what did you last complete? (e.g., "Finished BSc in Computer Science at MIT")`;
-        setConversationStep(1);
-        break;
-      }
-      case 1: { // Current education
-        if (userInput.toLowerCase().includes("bachelor") || userInput.toLowerCase().includes("bsc") || userInput.toLowerCase().includes("ba")) {
-          newData.current_education_level = "undergraduate";
-        } else if (userInput.toLowerCase().includes("master") || userInput.toLowerCase().includes("msc") || userInput.toLowerCase().includes("ma")) {
-          newData.current_education_level = "graduate";
-        } else if (userInput.toLowerCase().includes("phd") || userInput.toLowerCase().includes("doctor")) {
-          newData.current_education_level = "professional";
-        } else if (userInput.toLowerCase().includes("high school") || userInput.toLowerCase().includes("secondary")) {
-          newData.current_education_level = "high_school";
-        }
-        response = `Got it! So you're looking for a Master's, PhD, or another degree next? And which countries are you interested in studying in?`;
-        setConversationStep(2);
-        break;
-      }
-      case 2: { // Target degree and countries
-        if (userInput.toLowerCase().includes("master")) newData.target_degree = "masters";
-        else if (userInput.toLowerCase().includes("phd") || userInput.toLowerCase().includes("doctor")) newData.target_degree = "phd";
-        else if (userInput.toLowerCase().includes("bachelor")) newData.target_degree = "bachelor";
-        else if (userInput.toLowerCase().includes("postdoc")) newData.target_degree = "postdoc";
-        
-        const countries: string[] = [];
-        if (userInput.toLowerCase().includes("us") || userInput.toLowerCase().includes("america") || userInput.toLowerCase().includes("usa")) countries.push("United States");
-        if (userInput.toLowerCase().includes("uk") || userInput.toLowerCase().includes("britain") || userInput.toLowerCase().includes("england")) countries.push("United Kingdom");
-        if (userInput.toLowerCase().includes("canada")) countries.push("Canada");
-        if (userInput.toLowerCase().includes("germany")) countries.push("Germany");
-        if (userInput.toLowerCase().includes("australia")) countries.push("Australia");
-        newData.preferred_countries = countries;
-        
-        response = `Great choices! Quick question - what was your GPA (roughly)? And do you have any work experience?`;
-        setConversationStep(3);
-        break;
-      }
-      case 3: { // GPA and work experience
-        const gpaMatch = userInput.match(/(\d+\.?\d*)/);
-        if (gpaMatch) newData.gpa = parseFloat(gpaMatch[1]);
-        
-        const expMatch = userInput.match(/(\d+)\s*(year|month)/i);
-        if (expMatch) {
-          newData.work_experience_years = expMatch[2].toLowerCase() === "month" 
-            ? Math.round(parseInt(expMatch[1]) / 12) 
-            : parseInt(expMatch[1]);
-        }
-        
-        response = `Last thing - any special circumstances that might help your application? (First-generation student, financial need, disability, refugee status?)`;
-        setConversationStep(4);
-        break;
-      }
-      case 4: { // Circumstances
-        newData.circumstances = {
-          financial_need: userInput.toLowerCase().includes("financial") || userInput.toLowerCase().includes("aid") || userInput.toLowerCase().includes("need"),
-          first_gen: userInput.toLowerCase().includes("first") || userInput.toLowerCase().includes("first-gen") || userInput.toLowerCase().includes("first generation"),
-          refugee: userInput.toLowerCase().includes("refugee") || userInput.toLowerCase().includes("displaced"),
-          disability: userInput.toLowerCase().includes("disability") || userInput.toLowerCase().includes("disabled"),
-        };
-        
-        response = `Perfect! I've got everything I need. Let me find the best scholarships for you...`;
-        setConversationStep(5);
-        
-        // Save and complete
-        setTimeout(() => saveProfile(newData), 1500);
-        break;
-      }
-      default:
-        response = "Thanks! Processing your information...";
-    }
-
-    setExtractedData(newData);
-    const assistantMsg: Message = { role: "assistant", content: response, timestamp: new Date().toISOString() };
-    const allMsgs = [...messages, { role: "user" as const, content: userInput, timestamp: new Date().toISOString() }, assistantMsg];
-    setMessages(allMsgs);
-    
-    // Speak Ada's response
-    speak(response);
-    
-    // Save fallback progress too
-    saveConversationProgress(allMsgs, newData, step + 1, step >= 4 ? "completed" : "in_progress");
-  };
-
-  const saveProfile = async (data: ExtractedData) => {
-    console.log("=== SAVE PROFILE STARTED ===");
-    console.log("User:", user?.id);
-    console.log("Data to save:", data);
-    
+  // Redirect if not logged in
+  useEffect(() => {
     if (!user) {
-      console.error("No user found, skipping save but redirecting...");
-      router.push("/qualify?from=onboarding");
-      return;
+      router.push("/login?redirectTo=/onboarding");
     }
+  }, [user, router]);
 
-    setIsCompleting(true);
-
-    try {
-      // Try to upsert user row (create if doesn't exist)
-      console.log("Attempting to upsert users table...");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: userError } = await (supabase as any)
-        .from("users")
-        .upsert({ 
-          id: user.id,
-          email: user.email,
-          full_name: data.full_name || user.full_name,
-          onboarding_complete: true 
-        }, {
-          onConflict: "id"
-        });
-      
-      if (userError) {
-        console.error("User update error (continuing anyway):", userError);
-      } else {
-        console.log("Users table updated successfully");
-      }
-
-      // Upsert academic profile
-      console.log("Attempting to upsert academic_profiles...");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: profileError } = await (supabase as any)
-        .from("academic_profiles")
-        .upsert({
-          user_id: user.id,
-          nationality: data.nationality,
-          country_of_residence: data.country_of_residence,
-          current_education_level: data.current_education_level,
-          current_institution: data.current_institution,
-          graduation_year: data.graduation_year,
-          gpa: data.gpa,
-          target_degree: data.target_degree,
-          target_fields: data.target_fields || [],
-          preferred_countries: data.preferred_countries || [],
-          work_experience_years: data.work_experience_years || 0,
-          languages: data.languages || [],
-          circumstances: data.circumstances || {},
-          profile_completeness: calculateCompleteness(data),
-          ai_extracted: true,
-        }, {
-          onConflict: "user_id"
-        });
-
-      if (profileError) {
-        console.error("Profile upsert error (continuing anyway):", profileError);
-      } else {
-        console.log("Academic profile upserted successfully");
-      }
-
-      console.log("Refreshing user...");
-      await refreshUser().catch(e => console.error("Refresh user error:", e));
-      
-    } catch (error) {
-      console.error("=== SAVE PROFILE ERROR ===", error);
-    } finally {
-      // ALWAYS redirect - don't leave user stuck
-      console.log("=== REDIRECTING TO QUALIFY ===");
-      router.push("/qualify?from=onboarding");
-    }
-  };
-
-  const calculateCompleteness = (data: ExtractedData): number => {
-    let score = 0;
-    if (data.nationality) score += 15;
-    if (data.current_education_level) score += 15;
-    if (data.target_degree) score += 15;
-    if (data.gpa) score += 10;
-    if (data.preferred_countries?.length) score += 10;
-    if (data.work_experience_years !== undefined) score += 10;
-    if (data.circumstances && Object.keys(data.circumstances).length > 0) score += 10;
-    if (data.target_fields?.length) score += 10;
-    if (data.full_name) score += 5;
-    return Math.min(100, score);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // Show loading while fetching conversation
-  if (loadingConversation) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex items-center justify-center relative overflow-hidden">
-        {/* Background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[150px]"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent-500/10 rounded-full blur-[150px]"></div>
-        </div>
-        
-        <div className="text-center relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary-500/20">
-            <span className="text-white font-bold text-2xl">A</span>
-          </div>
-          <div className="flex gap-1.5 justify-center mb-4">
-            <motion.div
-              className="w-3 h-3 rounded-full bg-primary-500"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-            />
-            <motion.div
-              className="w-3 h-3 rounded-full bg-accent-500"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-            />
-            <motion.div
-              className="w-3 h-3 rounded-full bg-primary-500"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-            />
-          </div>
-          <p className="text-stone-400">Loading your conversation...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950">
+        <div className="w-12 h-12 border-4 border-stone-700 border-t-primary-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -809,248 +376,188 @@ export default function OnboardingPage() {
       <div className="absolute inset-0 pointer-events-none">
         <motion.div 
           className="absolute -top-20 -left-20 w-80 h-80 bg-primary-500/10 rounded-full blur-[120px]"
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
           transition={{ duration: 8, repeat: Infinity }}
         />
         <motion.div 
-          className="absolute -bottom-20 -right-20 w-96 h-96 bg-accent-500/10 rounded-full blur-[120px]"
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            opacity: [0.5, 0.3, 0.5],
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute -bottom-20 -right-20 w-80 h-80 bg-accent-500/10 rounded-full blur-[120px]"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 10, repeat: Infinity }}
         />
       </div>
 
       {/* Header */}
-      <header className="flex-shrink-0 bg-white/5 backdrop-blur-xl border-b border-white/10 px-4 py-3 sm:py-4 relative z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <header className="flex-shrink-0 px-4 py-4 border-b border-white/5 relative z-10">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Ada Avatar */}
             <div className="relative">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary-500/20">
-                <span className="text-white font-bold text-lg sm:text-xl">A</span>
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center ${isSpeaking ? 'animate-pulse' : ''}`}>
+                <span className="text-xl">🎓</span>
               </div>
-              {/* Online indicator */}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-stone-900"></span>
+              {isConnected && (
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-stone-900" />
+              )}
             </div>
-            
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="font-semibold text-white text-sm sm:text-base">Ada</h1>
-                {/* Speaking indicator */}
-                {(isSpeaking || ttsLoading) && (
-                  <span className="flex gap-0.5 items-end h-4">
-                    <motion.span 
-                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
-                      animate={{ height: ttsLoading ? [8, 8] : [12, 16, 12] }}
-                      transition={{ duration: 0.5, repeat: Infinity }}
-                    />
-                    <motion.span 
-                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
-                      animate={{ height: ttsLoading ? [8, 8] : [16, 12, 16] }}
-                      transition={{ duration: 0.5, repeat: Infinity, delay: 0.15 }}
-                    />
-                    <motion.span 
-                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
-                      animate={{ height: ttsLoading ? [8, 8] : [12, 16, 12] }}
-                      transition={{ duration: 0.5, repeat: Infinity, delay: 0.3 }}
-                    />
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-stone-400 truncate">Your Scholarship Advisor</p>
+            <div>
+              <h1 className="text-lg font-bold text-white">Ada</h1>
+              <p className="text-xs text-stone-400">
+                {isConnected ? (isSpeaking ? "Speaking..." : isListening ? "Listening..." : "Connected") : "Voice Assistant"}
+              </p>
             </div>
           </div>
           
-          {/* TTS Toggle Button */}
           <button
-            onClick={() => {
-              if (ttsEnabled) {
-                stopSpeaking();
-              }
-              setTtsEnabled(!ttsEnabled);
-            }}
-            className={`p-2.5 rounded-xl transition-all ${
-              ttsEnabled
-                ? "bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 border border-primary-500/30"
-                : "bg-white/5 text-stone-500 hover:bg-white/10 border border-white/10"
-            }`}
-            title={ttsEnabled ? "Mute Ada" : "Unmute Ada"}
+            onClick={() => router.push("/dashboard")}
+            className="text-stone-400 hover:text-white transition-colors"
           >
-            {ttsEnabled ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            )}
+            Skip for now
           </button>
         </div>
       </header>
 
-      {/* Chat Area - scrollable */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 min-h-0 relative z-10">
-        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-5">
-          <AnimatePresence mode="popLayout">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 relative z-10">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Initial prompt if not connected */}
+          {!isConnected && messages.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20"
+            >
+              <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-primary-500/20 flex items-center justify-center">
+                <span className="text-5xl">🎤</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3">Meet Ada, Your Scholarship Advisor</h2>
+              <p className="text-stone-400 max-w-md mx-auto mb-8">
+                Have a quick voice conversation with Ada to find scholarships perfectly matched to your profile.
+              </p>
+              <button
+                onClick={connect}
+                disabled={isConnecting}
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all disabled:opacity-50"
+              >
+                {isConnecting ? "Connecting..." : "Start Conversation"}
+              </button>
+              {connectionError && (
+                <p className="mt-4 text-red-400 text-sm">{connectionError}</p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Messages */}
+          <AnimatePresence>
             {messages.map((message, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {/* Assistant avatar */}
-                {message.role === "assistant" && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
-                    <span className="text-white font-bold text-sm">A</span>
-                  </div>
-                )}
-                
-                <div
-                  className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
-                    message.role === "user"
-                      ? "bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-br-md shadow-lg shadow-primary-500/20"
-                      : "bg-white/10 backdrop-blur-sm border border-white/10 text-stone-100 rounded-bl-md"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed">{message.content}</p>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  message.role === "user" 
+                    ? "bg-primary-500 text-white" 
+                    : "bg-white/10 text-stone-100 border border-white/5"
+                }`}>
+                  <p className="text-sm leading-relaxed">{message.content}</p>
                 </div>
-
-                {/* User avatar */}
-                {message.role === "user" && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">
-                      {user?.full_name?.charAt(0) || "U"}
-                    </span>
-                  </div>
-                )}
               </motion.div>
             ))}
           </AnimatePresence>
-          
-          {/* Loading/Typing indicator */}
-          {(loading || isCompleting) && (
+
+          {/* Current transcript (Ada speaking) */}
+          {currentTranscript && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3 justify-start"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-start"
             >
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
-                <span className="text-white font-bold text-sm">A</span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
-                {isCompleting ? (
-                  <p className="text-stone-300 text-sm flex items-center gap-2">
-                    <span className="inline-block w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></span>
-                    Finding your scholarships...
-                  </p>
-                ) : (
-                  <div className="flex gap-1.5">
-                    <motion.span 
-                      className="w-2 h-2 bg-stone-400 rounded-full"
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.span 
-                      className="w-2 h-2 bg-stone-400 rounded-full"
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-                    />
-                    <motion.span 
-                      className="w-2 h-2 bg-stone-400 rounded-full"
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-                    />
-                  </div>
-                )}
+              <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-white/10 text-stone-100 border border-white/5">
+                <p className="text-sm leading-relaxed">{currentTranscript}</p>
               </div>
             </motion.div>
           )}
-          
+
+          {/* Speaking/Listening indicator */}
+          {isConnected && (isSpeaking || isListening) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-center"
+            >
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                {[...Array(5)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className={`w-1 rounded-full ${isSpeaking ? "bg-accent-500" : "bg-primary-500"}`}
+                    animate={{
+                      height: isSpeaking || isListening 
+                        ? [8, 24 * (0.3 + Math.random() * 0.7), 8] 
+                        : 8
+                    }}
+                    transition={{
+                      duration: 0.5,
+                      repeat: Infinity,
+                      delay: i * 0.1,
+                    }}
+                  />
+                ))}
+                <span className="text-xs text-stone-400 ml-2">
+                  {isSpeaking ? "Ada is speaking..." : "Listening..."}
+                </span>
+              </div>
+            </motion.div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input Area - fixed at bottom */}
-      <div className="flex-shrink-0 bg-white/5 backdrop-blur-xl border-t border-white/10 px-3 sm:px-4 py-3 sm:py-4 relative z-10">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Voice Button */}
-            {voiceSupported && (
-              <motion.button
-                onClick={isListening ? stopListening : startListening}
-                whileTap={{ scale: 0.95 }}
-                className={`p-3 sm:p-3.5 rounded-xl transition-all flex-shrink-0 ${
-                  isListening
-                    ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
-                    : "bg-white/10 text-stone-300 hover:bg-white/20 border border-white/10"
-                }`}
-              >
-                {isListening ? (
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                    </svg>
-                  </motion.div>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                )}
-              </motion.button>
-            )}
-
-            {/* Text Input */}
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={isListening ? "Listening..." : "Type your message..."}
-                disabled={loading || isListening}
-                className="w-full px-4 py-3 sm:py-3.5 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 focus:bg-white/10 transition-all text-white placeholder:text-stone-500 text-sm sm:text-base disabled:opacity-50"
-              />
-            </div>
-
-            {/* Send Button */}
-            <motion.button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              whileTap={{ scale: 0.95 }}
-              className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-400 hover:to-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 shadow-lg shadow-primary-500/30 disabled:shadow-none"
+      {/* Bottom Controls */}
+      {isConnected && (
+        <div className="flex-shrink-0 px-4 py-6 border-t border-white/5 relative z-10">
+          <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
+            {/* Mic button */}
+            <button
+              onClick={toggleListening}
+              className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all ${
+                isListening 
+                  ? "bg-red-500 shadow-lg shadow-red-500/40" 
+                  : "bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50"
+              }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              {/* Audio level ring */}
+              {isListening && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-red-400"
+                  animate={{ scale: 1 + audioLevel * 0.5, opacity: 1 - audioLevel }}
+                  transition={{ duration: 0.1 }}
+                />
+              )}
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                {isListening ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                )}
               </svg>
-            </motion.button>
+            </button>
+
+            {/* End conversation */}
+            <button
+              onClick={saveProfile}
+              disabled={isCompleting || messages.length < 4}
+              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-medium hover:bg-white/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCompleting ? "Saving..." : "Finish & Find Scholarships"}
+            </button>
           </div>
           
-          <p className="text-xs text-stone-500 text-center mt-3 hidden sm:block">
-            {voiceSupported ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span>
-                Tap the microphone to speak, or type your response
-              </span>
-            ) : (
-              "Type your response and press Enter"
-            )}
+          <p className="text-center text-xs text-stone-500 mt-4">
+            {isListening ? "Tap the mic to stop" : "Tap the mic to speak"}
           </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
