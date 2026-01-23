@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavBar />
 
           {/* Main Content */}
-          <main className="flex-1 pt-28">
+          <main className="flex-1">
             {children}
           </main>
 
