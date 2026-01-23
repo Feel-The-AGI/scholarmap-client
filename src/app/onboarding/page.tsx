@@ -769,37 +769,100 @@ export default function OnboardingPage() {
   // Show loading while fetching conversation
   if (loadingConversation) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-stone-500">Loading your conversation...</p>
+      <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex items-center justify-center relative overflow-hidden">
+        {/* Background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[150px]"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent-500/10 rounded-full blur-[150px]"></div>
+        </div>
+        
+        <div className="text-center relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary-500/20">
+            <span className="text-white font-bold text-2xl">A</span>
+          </div>
+          <div className="flex gap-1.5 justify-center mb-4">
+            <motion.div
+              className="w-3 h-3 rounded-full bg-primary-500"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+            />
+            <motion.div
+              className="w-3 h-3 rounded-full bg-accent-500"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
+            />
+            <motion.div
+              className="w-3 h-3 rounded-full bg-primary-500"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
+            />
+          </div>
+          <p className="text-stone-400">Loading your conversation...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen h-[100dvh] bg-stone-50 flex flex-col overflow-hidden">
+    <div className="h-screen h-[100dvh] bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex flex-col overflow-hidden relative">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.div 
+          className="absolute -top-20 -left-20 w-80 h-80 bg-primary-500/10 rounded-full blur-[120px]"
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.div 
+          className="absolute -bottom-20 -right-20 w-96 h-96 bg-accent-500/10 rounded-full blur-[120px]"
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            opacity: [0.5, 0.3, 0.5],
+          }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+      </div>
+
       {/* Header */}
-      <header className="flex-shrink-0 bg-white border-b border-stone-200 px-4 py-3 sm:py-4">
+      <header className="flex-shrink-0 bg-white/5 backdrop-blur-xl border-b border-white/10 px-4 py-3 sm:py-4 relative z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm sm:text-base">A</span>
+            {/* Ada Avatar */}
+            <div className="relative">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary-500/20">
+                <span className="text-white font-bold text-lg sm:text-xl">A</span>
+              </div>
+              {/* Online indicator */}
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-stone-900"></span>
             </div>
+            
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-semibold text-stone-900 text-sm sm:text-base">Ada</h1>
+                <h1 className="font-semibold text-white text-sm sm:text-base">Ada</h1>
                 {/* Speaking indicator */}
                 {(isSpeaking || ttsLoading) && (
                   <span className="flex gap-0.5 items-end h-4">
-                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-3 animate-bounce'}`} style={{ animationDelay: "0ms" }}></span>
-                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-4 animate-bounce'}`} style={{ animationDelay: "150ms" }}></span>
-                    <span className={`w-1 bg-primary-500 rounded-full ${ttsLoading ? 'h-2 animate-pulse' : 'h-3 animate-bounce'}`} style={{ animationDelay: "300ms" }}></span>
+                    <motion.span 
+                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
+                      animate={{ height: ttsLoading ? [8, 8] : [12, 16, 12] }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
+                    />
+                    <motion.span 
+                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
+                      animate={{ height: ttsLoading ? [8, 8] : [16, 12, 16] }}
+                      transition={{ duration: 0.5, repeat: Infinity, delay: 0.15 }}
+                    />
+                    <motion.span 
+                      className="w-1 bg-gradient-to-t from-primary-500 to-accent-500 rounded-full"
+                      animate={{ height: ttsLoading ? [8, 8] : [12, 16, 12] }}
+                      transition={{ duration: 0.5, repeat: Infinity, delay: 0.3 }}
+                    />
                   </span>
                 )}
               </div>
-              <p className="text-xs text-stone-500 truncate">Your Scholarship Advisor</p>
+              <p className="text-xs text-stone-400 truncate">Your Scholarship Advisor</p>
             </div>
           </div>
           
@@ -811,10 +874,10 @@ export default function OnboardingPage() {
               }
               setTtsEnabled(!ttsEnabled);
             }}
-            className={`p-2 rounded-lg transition-all ${
+            className={`p-2.5 rounded-xl transition-all ${
               ttsEnabled
-                ? "bg-primary-100 text-primary-600 hover:bg-primary-200"
-                : "bg-stone-100 text-stone-400 hover:bg-stone-200"
+                ? "bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 border border-primary-500/30"
+                : "bg-white/5 text-stone-500 hover:bg-white/10 border border-white/10"
             }`}
             title={ttsEnabled ? "Mute Ada" : "Unmute Ada"}
           >
@@ -833,44 +896,80 @@ export default function OnboardingPage() {
       </header>
 
       {/* Chat Area - scrollable */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 min-h-0">
-        <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 min-h-0 relative z-10">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-5">
           <AnimatePresence mode="popLayout">
             {messages.map((message, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
+                {/* Assistant avatar */}
+                {message.role === "assistant" && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                    <span className="text-white font-bold text-sm">A</span>
+                  </div>
+                )}
+                
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 ${
+                  className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
                     message.role === "user"
-                      ? "bg-primary-500 text-white rounded-br-md"
-                      : "bg-white shadow-md shadow-stone-200/50 text-stone-900 rounded-bl-md"
+                      ? "bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-br-md shadow-lg shadow-primary-500/20"
+                      : "bg-white/10 backdrop-blur-sm border border-white/10 text-stone-100 rounded-bl-md"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed">{message.content}</p>
                 </div>
+
+                {/* User avatar */}
+                {message.role === "user" && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">
+                      {user?.full_name?.charAt(0) || "U"}
+                    </span>
+                  </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
           
+          {/* Loading/Typing indicator */}
           {(loading || isCompleting) && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-start"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3 justify-start"
             >
-                <div className="bg-white shadow-md shadow-stone-200/50 rounded-2xl rounded-bl-md px-3 sm:px-4 py-2 sm:py-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                <span className="text-white font-bold text-sm">A</span>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
                 {isCompleting ? (
-                  <p className="text-stone-600 text-sm">Finding your scholarships...</p>
+                  <p className="text-stone-300 text-sm flex items-center gap-2">
+                    <span className="inline-block w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></span>
+                    Finding your scholarships...
+                  </p>
                 ) : (
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                  <div className="flex gap-1.5">
+                    <motion.span 
+                      className="w-2 h-2 bg-stone-400 rounded-full"
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                    />
+                    <motion.span 
+                      className="w-2 h-2 bg-stone-400 rounded-full"
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
+                    />
+                    <motion.span 
+                      className="w-2 h-2 bg-stone-400 rounded-full"
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
+                    />
                   </div>
                 )}
               </div>
@@ -882,23 +981,36 @@ export default function OnboardingPage() {
       </div>
 
       {/* Input Area - fixed at bottom */}
-      <div className="flex-shrink-0 bg-white border-t border-stone-200 px-3 sm:px-4 py-3 sm:py-4">
+      <div className="flex-shrink-0 bg-white/5 backdrop-blur-xl border-t border-white/10 px-3 sm:px-4 py-3 sm:py-4 relative z-10">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Voice Button */}
             {voiceSupported && (
-              <button
+              <motion.button
                 onClick={isListening ? stopListening : startListening}
-                className={`p-2 sm:p-3 rounded-xl transition-all flex-shrink-0 ${
+                whileTap={{ scale: 0.95 }}
+                className={`p-3 sm:p-3.5 rounded-xl transition-all flex-shrink-0 ${
                   isListening
-                    ? "bg-red-500 text-white animate-pulse"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
+                    : "bg-white/10 text-stone-300 hover:bg-white/20 border border-white/10"
                 }`}
               >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </button>
+                {isListening ? (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  </motion.div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+              </motion.button>
             )}
 
             {/* Text Input */}
@@ -910,28 +1022,35 @@ export default function OnboardingPage() {
                 onKeyPress={handleKeyPress}
                 placeholder={isListening ? "Listening..." : "Type your message..."}
                 disabled={loading || isListening}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-2 border-stone-200 focus:border-primary-500 focus:ring-0 transition-colors pr-12 text-stone-900 placeholder:text-stone-400 bg-white text-sm sm:text-base"
+                className="w-full px-4 py-3 sm:py-3.5 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 focus:bg-white/10 transition-all text-white placeholder:text-stone-500 text-sm sm:text-base disabled:opacity-50"
               />
             </div>
 
             {/* Send Button */}
-            <button
+            <motion.button
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              className="p-2 sm:p-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0"
+              whileTap={{ scale: 0.95 }}
+              className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-400 hover:to-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 shadow-lg shadow-primary-500/30 disabled:shadow-none"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
-            </button>
+            </motion.button>
           </div>
           
-          <p className="text-xs text-stone-500 text-center mt-2 hidden sm:block">
-            {voiceSupported ? "Tap the microphone to speak, or type your response" : "Type your response and press Enter"}
+          <p className="text-xs text-stone-500 text-center mt-3 hidden sm:block">
+            {voiceSupported ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span>
+                Tap the microphone to speak, or type your response
+              </span>
+            ) : (
+              "Type your response and press Enter"
+            )}
           </p>
         </div>
       </div>
     </div>
   );
 }
-

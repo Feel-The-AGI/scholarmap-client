@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase";
 import type { Program } from "@/lib/types";
 
 const levelConfig: Record<string, { icon: string; color: string; bg: string }> = {
-  bachelor: { icon: "🎓", color: "text-blue-700", bg: "bg-blue-100" },
-  masters: { icon: "📚", color: "text-purple-700", bg: "bg-purple-100" },
-  phd: { icon: "🔬", color: "text-rose-700", bg: "bg-rose-100" },
-  postdoc: { icon: "🏆", color: "text-teal-700", bg: "bg-teal-100" },
+  bachelor: { icon: "🎓", color: "text-blue-400", bg: "bg-blue-500/20" },
+  masters: { icon: "📚", color: "text-purple-400", bg: "bg-purple-500/20" },
+  phd: { icon: "🔬", color: "text-rose-400", bg: "bg-rose-500/20" },
+  postdoc: { icon: "🏆", color: "text-teal-400", bg: "bg-teal-500/20" },
 };
 
 export default function AdminPage() {
@@ -136,10 +136,13 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin" />
-          <p className="text-stone-500">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[150px]"></div>
+        </div>
+        <div className="flex flex-col items-center gap-4 relative z-10">
+          <div className="w-12 h-12 border-4 border-stone-700 border-t-primary-500 rounded-full animate-spin" />
+          <p className="text-stone-400">Loading...</p>
         </div>
       </div>
     );
@@ -148,46 +151,55 @@ export default function AdminPage() {
   // Login Page
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/20 blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-linear-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
+      <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex items-center justify-center px-6 relative overflow-hidden">
+        {/* Background elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <motion.div 
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary-500/10 rounded-full blur-[150px]"
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent-500/10 rounded-full blur-[150px]"
+            animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
         </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative w-full max-w-md"
+          className="relative w-full max-w-md z-10"
         >
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-linear-to-tr from-stone-900 to-stone-800 flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-primary-500/20">
               <span className="text-2xl">🔐</span>
             </div>
-            <h1 className="text-2xl font-bold text-stone-900">Admin Portal</h1>
+            <h1 className="text-2xl font-bold text-white">Admin Portal</h1>
             <p className="text-stone-500 mt-1">Sign in to manage scholarships</p>
           </div>
 
           <form
             onSubmit={handleLogin}
-            className="p-8 rounded-3xl bg-white border border-stone-200/80 shadow-xl shadow-stone-200/30 space-y-5"
+            className="p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl space-y-5"
           >
             <div>
-              <label className="block text-sm font-semibold text-stone-900 mb-2">Email</label>
+              <label className="block text-sm font-semibold text-white mb-2">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                className="w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                 placeholder="admin@scholarmap.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-stone-900 mb-2">Password</label>
+              <label className="block text-sm font-semibold text-white mb-2">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                className="w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                 placeholder="••••••••"
               />
             </div>
@@ -198,7 +210,7 @@ export default function AdminPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl"
+                  className="text-sm text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20"
                 >
                   {authError}
                 </motion.p>
@@ -207,7 +219,7 @@ export default function AdminPage() {
 
             <button
               type="submit"
-              className="w-full px-6 py-4 rounded-xl bg-stone-900 text-white font-semibold hover:bg-stone-800 transition-colors"
+              className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 transition-all"
             >
               Sign In
             </button>
@@ -219,28 +231,34 @@ export default function AdminPage() {
 
   // Dashboard
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-primary-500/5 rounded-full blur-[180px]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-accent-500/5 rounded-full blur-[150px]" />
+      </div>
+
       {/* Header */}
-      <div className="relative py-8 px-6 border-b border-stone-200 bg-white/50 backdrop-blur-xl">
+      <div className="relative py-8 px-6 border-b border-white/5 bg-stone-950/50 backdrop-blur-xl z-10">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-stone-900 to-stone-800 flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
                 <span className="text-xl">⚡</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-stone-900">Agent Copilot</h1>
+                <h1 className="text-xl font-bold text-white">Agent Copilot</h1>
                 <p className="text-sm text-stone-500">Scholarship Management Dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-100">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
                 <div className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
-                <span className="text-sm text-stone-600">{user.email}</span>
+                <span className="text-sm text-stone-400">{user.email}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors border border-red-500/20"
               >
                 Logout
               </button>
@@ -249,27 +267,27 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="px-6 py-8 relative z-10">
         <div className="max-w-7xl mx-auto">
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: "Total Programs", value: programs.length, icon: "📊", color: "from-blue-500 to-indigo-600" },
-              { label: "Active", value: programs.filter(p => p.status === "active").length, icon: "✅", color: "from-accent-500 to-teal-600" },
-              { label: "Pending Review", value: reviews.length, icon: "⚠️", color: "from-amber-500 to-orange-600" },
-              { label: "Paused", value: programs.filter(p => p.status === "paused").length, icon: "⏸️", color: "from-stone-500 to-stone-600" },
+              { label: "Total Programs", value: programs.length, icon: "📊", color: "from-blue-500 to-indigo-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+              { label: "Active", value: programs.filter(p => p.status === "active").length, icon: "✅", color: "from-accent-500 to-teal-600", bg: "bg-accent-500/10", border: "border-accent-500/20" },
+              { label: "Pending Review", value: reviews.length, icon: "⚠️", color: "from-amber-500 to-orange-600", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+              { label: "Paused", value: programs.filter(p => p.status === "paused").length, icon: "⏸️", color: "from-stone-500 to-stone-600", bg: "bg-white/5", border: "border-white/10" },
             ].map((stat) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-2xl bg-white border border-stone-200/80 shadow-lg shadow-stone-200/30"
+                className={`p-5 rounded-2xl ${stat.bg} border ${stat.border}`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-2xl">{stat.icon}</span>
-                  <span className={`w-8 h-1 rounded-full bg-linear-to-r ${stat.color}`} />
+                  <span className={`w-8 h-1 rounded-full bg-gradient-to-r ${stat.color}`} />
                 </div>
-                <div className="text-3xl font-bold text-stone-900">{stat.value}</div>
+                <div className="text-3xl font-bold text-white">{stat.value}</div>
                 <div className="text-sm text-stone-500">{stat.label}</div>
               </motion.div>
             ))}
@@ -281,9 +299,9 @@ export default function AdminPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-3xl bg-linear-to-tr from-stone-900 to-stone-800 text-white"
+                className="p-6 rounded-3xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-primary-500/20"
               >
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <span className="text-xl">🤖</span>
                   Batch Ingest Scholarships
                 </h2>
@@ -292,11 +310,11 @@ export default function AdminPage() {
                     <textarea
                       value={urls}
                       onChange={(e) => setUrls(e.target.value)}
-                      placeholder="Paste one URL per line...&#10;https://example.com/scholarship1&#10;https://example.com/scholarship2&#10;https://example.com/scholarship3"
+                      placeholder="Paste one URL per line...&#10;https://example.com/scholarship1&#10;https://example.com/scholarship2"
                       rows={5}
-                      className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-stone-400 focus:border-white/40 focus:ring-2 focus:ring-white/10 outline-none transition-all resize-none font-mono text-sm"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-stone-500 focus:border-white/40 focus:ring-2 focus:ring-white/10 outline-none transition-all resize-none font-mono text-sm"
                     />
-                    <p className="text-xs text-stone-400 mt-2">
+                    <p className="text-xs text-stone-500 mt-2">
                       {urls.split('\n').filter(u => u.trim()).length} URL(s) ready • Max 50 per batch
                     </p>
                   </div>
@@ -332,16 +350,15 @@ export default function AdminPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="mt-4 space-y-3"
                     >
-                      {/* Summary */}
-                      <div className={`p-4 rounded-xl ${batchResults.failed === 0 ? "bg-accent-500/20" : batchResults.successful === 0 ? "bg-red-500/20" : "bg-amber-500/20"}`}>
+                      <div className={`p-4 rounded-xl ${batchResults.failed === 0 ? "bg-accent-500/20 border border-accent-500/30" : batchResults.successful === 0 ? "bg-red-500/20 border border-red-500/30" : "bg-amber-500/20 border border-amber-500/30"}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <span className="text-2xl">{batchResults.failed === 0 ? "🎉" : batchResults.successful === 0 ? "❌" : "⚡"}</span>
                             <div>
-                              <p className="font-semibold">
+                              <p className="font-semibold text-white">
                                 {batchResults.successful}/{batchResults.total} Successful
                               </p>
-                              <p className="text-xs text-stone-300">
+                              <p className="text-xs text-stone-400">
                                 {batchResults.total_time?.toFixed(1)}s total
                               </p>
                             </div>
@@ -349,16 +366,15 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Individual results */}
                       <div className="max-h-64 overflow-y-auto space-y-2">
                         {batchResults.results.map((r, i) => (
                           <div
                             key={i}
-                            className={`p-3 rounded-lg text-xs ${r.success ? "bg-accent-500/10" : "bg-red-500/10"}`}
+                            className={`p-3 rounded-lg text-xs ${r.success ? "bg-accent-500/10 border border-accent-500/20" : "bg-red-500/10 border border-red-500/20"}`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="truncate font-mono text-stone-300" title={r.url}>
+                                <p className="truncate font-mono text-stone-400" title={r.url}>
                                   {r.url}
                                 </p>
                                 {r.success ? (
@@ -385,9 +401,9 @@ export default function AdminPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="mt-6 p-6 rounded-3xl bg-amber-50 border border-amber-200"
+                  className="mt-6 p-6 rounded-3xl bg-amber-500/10 border border-amber-500/20"
                 >
-                  <h2 className="text-lg font-bold text-amber-800 mb-4 flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
                     <span className="text-xl">⚠️</span>
                     Issues to Review ({reviews.length})
                   </h2>
@@ -395,7 +411,7 @@ export default function AdminPage() {
                     {reviews.map((r) => (
                       <div
                         key={r.id}
-                        className="p-4 rounded-xl bg-white border border-amber-200"
+                        className="p-4 rounded-xl bg-white/5 border border-white/10"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
@@ -403,21 +419,21 @@ export default function AdminPage() {
                               <span
                                 className={`text-xs px-2 py-0.5 rounded-lg font-medium ${
                                   r.severity === "high"
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-amber-100 text-amber-700"
+                                    ? "bg-red-500/20 text-red-400"
+                                    : "bg-amber-500/20 text-amber-400"
                                 }`}
                               >
                                 {r.severity}
                               </span>
-                              <span className="text-xs px-2 py-0.5 rounded-lg bg-stone-100 text-stone-600">
+                              <span className="text-xs px-2 py-0.5 rounded-lg bg-white/10 text-stone-400">
                                 {r.issue_type}
                               </span>
                             </div>
-                            <p className="text-sm text-stone-700">{r.note}</p>
+                            <p className="text-sm text-stone-300">{r.note}</p>
                           </div>
                           <button
                             onClick={() => resolveReview(r.id)}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-accent-100 text-accent-700 hover:bg-accent-200 transition-colors font-medium"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-accent-500/20 text-accent-400 hover:bg-accent-500/30 transition-colors font-medium border border-accent-500/20"
                           >
                             Resolve
                           </button>
@@ -435,32 +451,34 @@ export default function AdminPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-6 rounded-3xl bg-white border border-stone-200/80 shadow-xl shadow-stone-200/30"
+                className="p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10"
               >
-                <h2 className="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <span className="text-xl">📚</span>
                   All Programs ({programs.length})
                 </h2>
 
                 {programs.length === 0 ? (
                   <div className="text-center py-16">
-                    <div className="text-5xl mb-4">📭</div>
-                    <h3 className="text-lg font-semibold text-stone-900 mb-2">No programs yet</h3>
+                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-4xl">📭</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">No programs yet</h3>
                     <p className="text-stone-500">Ingest a scholarship URL to get started</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
                     {programs.map((p) => {
-                      const config = levelConfig[p.level] || { icon: "📄", color: "text-stone-700", bg: "bg-stone-100" };
+                      const config = levelConfig[p.level] || { icon: "📄", color: "text-stone-400", bg: "bg-stone-500/20" };
                       return (
                         <div
                           key={p.id}
-                          className="flex items-center justify-between p-4 rounded-2xl bg-stone-50 border border-stone-100 hover:bg-stone-100 transition-colors"
+                          className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
                         >
                           <div className="flex items-center gap-4">
                             <span className="text-2xl">{config.icon}</span>
                             <div>
-                              <h3 className="font-semibold text-stone-900">{p.name}</h3>
+                              <h3 className="font-semibold text-white">{p.name}</h3>
                               <p className="text-sm text-stone-500">
                                 {p.provider} · {p.level}
                               </p>
@@ -469,10 +487,10 @@ export default function AdminPage() {
                           <span
                             className={`text-xs px-3 py-1.5 rounded-full font-medium ${
                               p.status === "active"
-                                ? "bg-accent-100 text-accent-700"
+                                ? "bg-accent-500/20 text-accent-400 border border-accent-500/20"
                                 : p.status === "paused"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-stone-100 text-stone-600"
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                                : "bg-white/10 text-stone-400 border border-white/10"
                             }`}
                           >
                             {p.status}

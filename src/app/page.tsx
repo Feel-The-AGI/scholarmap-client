@@ -12,12 +12,12 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.3 }
+    transition: { staggerChildren: 0.1, delayChildren: 0.3 }
   }
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 30, filter: "blur(10px)" },
   show: { 
     opacity: 1, 
     y: 0, 
@@ -27,13 +27,12 @@ const item = {
 };
 
 const levelConfig = {
-  bachelor: { icon: "🎓", label: "Bachelor's", color: "from-blue-500 to-indigo-600" },
-  masters: { icon: "📚", label: "Master's", color: "from-purple-500 to-violet-600" },
-  phd: { icon: "🔬", label: "PhD", color: "from-primary-500 to-rose-600" },
-  postdoc: { icon: "🏆", label: "Postdoc", color: "from-accent-500 to-teal-600" },
+  bachelor: { icon: "🎓", label: "Bachelor's", color: "from-blue-500 to-indigo-600", darkBg: "bg-blue-500/20", textColor: "text-blue-400" },
+  masters: { icon: "📚", label: "Master's", color: "from-purple-500 to-violet-600", darkBg: "bg-purple-500/20", textColor: "text-purple-400" },
+  phd: { icon: "🔬", label: "PhD", color: "from-rose-500 to-pink-600", darkBg: "bg-rose-500/20", textColor: "text-rose-400" },
+  postdoc: { icon: "🏆", label: "Postdoc", color: "from-teal-500 to-emerald-600", darkBg: "bg-teal-500/20", textColor: "text-teal-400" },
 };
 
-// Component that handles auth code redirect
 function AuthCodeHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -41,7 +40,6 @@ function AuthCodeHandler() {
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
-      // Redirect to auth callback with the code
       router.replace(`/auth/callback?code=${code}`);
     }
   }, [searchParams, router]);
@@ -70,16 +68,29 @@ function HomeContent() {
   );
 
   return (
-    <div className="relative">
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex items-center overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 right-[10%] w-96 h-96 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/20 blur-3xl" />
-          <div className="absolute bottom-1/4 left-[5%] w-64 h-64 rounded-full bg-linear-to-tr from-accent-200/30 to-primary-200/10 blur-3xl" />
-        </div>
+    <div className="relative min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div 
+          className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-[150px]"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute top-1/2 -left-40 w-[500px] h-[500px] bg-accent-500/10 rounded-full blur-[150px]"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute -bottom-40 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[150px]"
+          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
 
-        <div className="max-w-7xl mx-auto px-6 w-full">
+      {/* Hero Section */}
+      <section className="relative min-h-[90vh] flex items-center overflow-hidden pt-20">
+        <div className="max-w-7xl mx-auto px-6 w-full relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left: Content */}
             <motion.div
@@ -91,20 +102,22 @@ function HomeContent() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-100 text-accent-700 text-sm font-medium mb-6"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-400 text-sm font-medium mb-6"
               >
-                <span className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
                 AI-Powered Scholarship Discovery
               </motion.div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95] mb-6">
-                Your Path to{" "}
-                <span className="text-gradient">Funded</span>
+                <span className="text-white">Your Path to</span>{" "}
+                <span className="bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 bg-clip-text text-transparent">
+                  Funded
+                </span>
                 <br />
-                Education
+                <span className="text-white">Education</span>
               </h1>
 
-              <p className="text-lg md:text-xl text-stone-600 dark:text-stone-300 max-w-lg mb-8 leading-relaxed">
+              <p className="text-lg md:text-xl text-stone-400 max-w-lg mb-8 leading-relaxed">
                 Discover life-changing scholarships curated by AI, verified by humans. 
                 From Bachelor&apos;s to PhD — find your perfect match.
               </p>
@@ -112,7 +125,7 @@ function HomeContent() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/programs"
-                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-linear-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
                 >
                   Browse All Programs
                   <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -121,7 +134,7 @@ function HomeContent() {
                 </Link>
                 <Link
                   href="/qualify"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 rounded-2xl hover:border-stone-300 dark:hover:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-700 transition-all active:scale-[0.98]"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all active:scale-[0.98]"
                 >
                   Check Eligibility
                 </Link>
@@ -135,31 +148,30 @@ function HomeContent() {
               animate="show"
               className="relative"
             >
-              {/* Decorative floating element */}
-              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-3xl bg-linear-to-tr from-primary-400 to-primary-500 opacity-20 blur-2xl" />
-              
               <div className="grid grid-cols-2 gap-4">
-                {levels.map((level, i) => {
+                {levels.map((level) => {
                   const config = levelConfig[level];
                   return (
                     <motion.div key={level} variants={item}>
                       <Link
                         href={`/programs?level=${level}`}
-                        className={`group relative block p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 hover:border-stone-300 dark:hover:border-stone-600 shadow-lg shadow-stone-200/50 dark:shadow-stone-900/50 hover:shadow-xl hover:shadow-stone-200/60 dark:hover:shadow-stone-900/60 transition-all hover:-translate-y-1 ${i === 0 ? 'col-span-1' : ''}`}
+                        className="group relative block p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:-translate-y-1"
                       >
-                        {/* Gradient accent */}
-                        <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-3xl bg-linear-to-r ${config.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                        {/* Gradient accent on hover */}
+                        <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-3xl bg-gradient-to-r ${config.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                         
-                        <span className="text-3xl mb-3 block">{config.icon}</span>
-                        <div className="text-4xl font-bold text-stone-900 dark:text-white mb-1">
+                        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl ${config.darkBg} mb-4`}>
+                          <span className="text-2xl">{config.icon}</span>
+                        </div>
+                        <div className={`text-4xl font-bold ${config.textColor} mb-1`}>
                           {loading ? (
-                            <span className="inline-block w-8 h-8 bg-stone-200 rounded animate-pulse" />
+                            <span className="inline-block w-8 h-8 bg-white/10 rounded animate-pulse" />
                           ) : (
                             grouped[level]?.length ?? 0
                           )}
                         </div>
-                        <div className="text-sm font-medium text-stone-500 dark:text-stone-400">{config.label}</div>
-                        <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">scholarships</div>
+                        <div className="text-sm font-medium text-stone-300">{config.label}</div>
+                        <div className="text-xs text-stone-500 mt-0.5">scholarships</div>
                       </Link>
                     </motion.div>
                   );
@@ -171,7 +183,7 @@ function HomeContent() {
       </section>
 
       {/* Featured Programs */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -181,14 +193,14 @@ function HomeContent() {
             className="flex items-end justify-between mb-12"
           >
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-white mb-2">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
                 Featured Programs
               </h2>
-              <p className="text-stone-500 dark:text-stone-400">Recently added and verified opportunities</p>
+              <p className="text-stone-400">Recently added and verified opportunities</p>
             </div>
             <Link
               href="/programs"
-              className="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+              className="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-primary-400 hover:text-primary-300 transition-colors"
             >
               View all
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -206,12 +218,12 @@ function HomeContent() {
           >
             {loading ? (
               [...Array(6)].map((_, i) => (
-                <div key={i} className="p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 animate-pulse">
-                  <div className="h-6 bg-stone-200 rounded w-3/4 mb-3" />
-                  <div className="h-4 bg-stone-100 rounded w-1/2 mb-4" />
+                <div key={i} className="p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 animate-pulse">
+                  <div className="h-6 bg-white/10 rounded w-3/4 mb-3" />
+                  <div className="h-4 bg-white/5 rounded w-1/2 mb-4" />
                   <div className="flex gap-2">
-                    <div className="h-6 w-20 bg-stone-100 rounded-full" />
-                    <div className="h-6 w-24 bg-stone-100 rounded-full" />
+                    <div className="h-6 w-20 bg-white/5 rounded-full" />
+                    <div className="h-6 w-24 bg-white/5 rounded-full" />
                   </div>
                 </div>
               ))
@@ -220,23 +232,23 @@ function HomeContent() {
                 <motion.div key={program.id} variants={item}>
                   <Link
                     href={`/programs/${program.id}`}
-                    className="group block p-6 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 hover:border-primary-300 shadow-lg shadow-stone-200/30 dark:shadow-stone-900/30 hover:shadow-xl hover:shadow-primary-100/50 dark:hover:shadow-primary-900/30 transition-all hover:-translate-y-1"
+                    className="group block p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-primary-500/30 hover:bg-white/10 transition-all hover:-translate-y-1"
                   >
-                    <h3 className="font-semibold text-lg text-stone-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
+                    <h3 className="font-semibold text-lg text-white mb-1 group-hover:text-primary-400 transition-colors line-clamp-1">
                       {program.name}
                     </h3>
-                    <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">{program.provider}</p>
+                    <p className="text-sm text-stone-400 mb-4">{program.provider}</p>
                     
                     <div className="flex flex-wrap gap-2">
                       <span className={`text-xs px-3 py-1.5 rounded-full font-medium capitalize ${
-                        program.level === 'phd' ? 'bg-rose-100 text-rose-700' :
-                        program.level === 'masters' ? 'bg-purple-100 text-purple-700' :
-                        program.level === 'bachelor' ? 'bg-blue-100 text-blue-700' :
-                        'bg-teal-100 text-teal-700'
+                        program.level === 'phd' ? 'bg-rose-500/20 text-rose-400' :
+                        program.level === 'masters' ? 'bg-purple-500/20 text-purple-400' :
+                        program.level === 'bachelor' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-teal-500/20 text-teal-400'
                       }`}>
                         {program.level}
                       </span>
-                      <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-accent-100 text-accent-700 capitalize">
+                      <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-accent-500/20 text-accent-400 capitalize">
                         {program.funding_type.replace("_", " ")}
                       </span>
                     </div>
@@ -255,7 +267,7 @@ function HomeContent() {
             >
               <Link
                 href="/programs"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary-400 hover:text-primary-300"
               >
                 View all {programs.length} programs
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -268,7 +280,7 @@ function HomeContent() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6 bg-linear-to-b from-transparent via-stone-100/50 dark:via-stone-800/50 to-transparent">
+      <section className="py-24 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -276,10 +288,10 @@ function HomeContent() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               How ScholarMap Works
             </h2>
-            <p className="text-stone-500 dark:text-stone-400 max-w-2xl mx-auto">
+            <p className="text-stone-400 max-w-2xl mx-auto">
               We use AI to discover, extract, and verify scholarship information so you can focus on what matters — your application.
             </p>
           </motion.div>
@@ -295,21 +307,20 @@ function HomeContent() {
               { step: "01", title: "Discover", desc: "Our AI scans trusted sources to find scholarships matching your profile", icon: "🔍" },
               { step: "02", title: "Extract", desc: "Key details like eligibility, deadlines, and requirements are automatically extracted", icon: "📋" },
               { step: "03", title: "Match", desc: "Get personalized recommendations based on your background and goals", icon: "🎯" },
-            ].map((item) => (
+            ].map((stepItem) => (
               <motion.div
-                key={item.step}
-                variants={{
-                  hidden: { opacity: 0, y: 30 },
-                  show: { opacity: 1, y: 0, transition: { type: "spring", damping: 20 } }
-                }}
+                key={stepItem.step}
+                variants={item}
                 className="relative group"
               >
-                <div className="absolute -inset-4 rounded-3xl bg-linear-to-tr from-primary-100/50 to-accent-100/30 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
-                <div className="relative p-8 rounded-3xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700/80 shadow-lg shadow-stone-200/30 dark:shadow-stone-900/30">
-                  <span className="text-5xl mb-6 block">{item.icon}</span>
-                  <span className="text-xs font-mono text-primary-500 font-semibold">{item.step}</span>
-                  <h3 className="text-xl font-bold text-stone-900 dark:text-white mt-1 mb-2">{item.title}</h3>
-                  <p className="text-stone-500 dark:text-stone-400 text-sm leading-relaxed">{item.desc}</p>
+                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-primary-500/10 to-accent-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                <div className="relative p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 mb-6">
+                    <span className="text-3xl">{stepItem.icon}</span>
+                  </div>
+                  <span className="text-xs font-mono text-primary-400 font-semibold">{stepItem.step}</span>
+                  <h3 className="text-xl font-bold text-white mt-1 mb-2">{stepItem.title}</h3>
+                  <p className="text-stone-400 text-sm leading-relaxed">{stepItem.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -318,18 +329,18 @@ function HomeContent() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 relative z-10">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative overflow-hidden rounded-[2.5rem] bg-linear-to-tr from-stone-900 to-stone-800 p-12 md:p-16 text-center"
+            className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary-500/20 via-accent-500/10 to-purple-500/20 border border-white/10 p-12 md:p-16 text-center"
           >
             {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-500/20 rounded-full blur-3xl" />
+            <div className="absolute top-0 left-0 w-64 h-64 bg-primary-500/20 rounded-full blur-[100px]" />
+            <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-500/20 rounded-full blur-[100px]" />
             
             <div className="relative">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -340,7 +351,7 @@ function HomeContent() {
               </p>
               <Link
                 href="/qualify"
-                className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-stone-900 bg-white rounded-2xl shadow-xl hover:bg-stone-50 transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-stone-900 bg-white rounded-2xl shadow-xl hover:bg-stone-100 transition-all active:scale-[0.98]"
               >
                 Check Your Eligibility
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -348,6 +359,39 @@ function HomeContent() {
                 </svg>
               </Link>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Trusted By / Stats Section */}
+      <section className="py-16 px-6 relative z-10 border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-8"
+          >
+            {[
+              { value: `${programs.length}+`, label: "Active Scholarships" },
+              { value: "50+", label: "Countries Covered" },
+              { value: "$10M+", label: "Funding Available" },
+              { value: "24/7", label: "AI Matching" },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="text-center"
+              >
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent mb-2">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-stone-400">{stat.label}</div>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </section>

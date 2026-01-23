@@ -10,8 +10,8 @@ import { createClient } from "@/lib/supabase";
 type UserProfile = {
   nationality: string;
   age: number | null;
-  degree: string;  // Current/highest degree
-  target_degree: string;  // What they're looking for (bachelor, masters, phd, postdoc)
+  degree: string;
+  target_degree: string;
   gpa: number | null;
   field_of_study: string;
   work_experience_years: number;
@@ -48,27 +48,28 @@ type EligibilityResults = {
 };
 
 const levelConfig: Record<string, { icon: string; color: string; bg: string }> = {
-  bachelor: { icon: "🎓", color: "text-blue-700", bg: "bg-blue-100" },
-  masters: { icon: "📚", color: "text-purple-700", bg: "bg-purple-100" },
-  phd: { icon: "🔬", color: "text-rose-700", bg: "bg-rose-100" },
-  postdoc: { icon: "🏆", color: "text-teal-700", bg: "bg-teal-100" },
+  bachelor: { icon: "🎓", color: "text-blue-400", bg: "bg-blue-500/20" },
+  masters: { icon: "📚", color: "text-purple-400", bg: "bg-purple-500/20" },
+  phd: { icon: "🔬", color: "text-rose-400", bg: "bg-rose-500/20" },
+  postdoc: { icon: "🏆", color: "text-teal-400", bg: "bg-teal-500/20" },
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://scholarmap-agent.onrender.com";
 
-// Loading fallback for Suspense
 function QualifyPageLoading() {
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-stone-500">Loading eligibility checker...</p>
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex items-center justify-center relative overflow-hidden">
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[150px]"></div>
+      </div>
+      <div className="text-center relative z-10">
+        <div className="w-12 h-12 border-4 border-stone-700 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-stone-400">Loading eligibility checker...</p>
       </div>
     </div>
   );
 }
 
-// Main page wrapper with Suspense
 export default function QualifyPage() {
   return (
     <Suspense fallback={<QualifyPageLoading />}>
@@ -77,7 +78,6 @@ export default function QualifyPage() {
   );
 }
 
-// Actual page content that uses useSearchParams
 function QualifyPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -106,7 +106,6 @@ function QualifyPageContent() {
   const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Check eligibility function
   const runEligibilityCheck = useCallback(async (profile: UserProfile) => {
     setLoading(true);
     setError(null);
@@ -114,9 +113,7 @@ function QualifyPageContent() {
     try {
       const response = await fetch(`${API_URL}/check-eligibility`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profile }),
       });
 
@@ -134,7 +131,6 @@ function QualifyPageContent() {
     }
   }, []);
 
-  // Load profile from Supabase on mount
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) {
@@ -143,7 +139,6 @@ function QualifyPageContent() {
       }
 
       try {
-        console.log("Loading academic profile for user:", user.id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: profile, error: profileError } = await (supabase as any)
           .from("academic_profiles")
@@ -152,18 +147,14 @@ function QualifyPageContent() {
           .single();
 
         if (profileError) {
-          console.log("No profile found:", profileError);
           setLoadingProfile(false);
           return;
         }
 
         if (profile) {
-          console.log("Loaded profile:", profile);
-          
-          // Map academic_profiles data to form structure
           const loadedForm: UserProfile = {
             nationality: profile.nationality || "",
-            age: null, // Calculate from date_of_birth if needed
+            age: null,
             degree: profile.current_education_level || "",
             target_degree: profile.target_degree || "",
             gpa: profile.gpa,
@@ -179,9 +170,7 @@ function QualifyPageContent() {
           setForm(loadedForm);
           setProfileLoaded(true);
           
-          // If coming from onboarding AND we have a profile, auto-run check
           if (fromOnboarding && profile.nationality) {
-            console.log("Auto-running eligibility check from onboarding...");
             runEligibilityCheck(loadedForm);
           }
         }
@@ -200,20 +189,15 @@ function QualifyPageContent() {
     runEligibilityCheck(form);
   };
 
-  // Count is available for future use
-  // const totalMatches = results
-  //   ? results.eligible.length + results.likely_eligible.length + results.maybe.length
-  //   : 0;
-
   const renderProgramCard = (match: ProgramMatch, variant: "eligible" | "likely" | "maybe" | "unlikely") => {
-    const config = levelConfig[match.level] || { icon: "📄", color: "text-stone-700", bg: "bg-stone-100" };
+    const config = levelConfig[match.level] || { icon: "📄", color: "text-stone-400", bg: "bg-stone-500/20" };
     const isExpanded = expandedProgram === match.program_id;
     
     const variantStyles = {
-      eligible: "bg-green-50 border-green-200 hover:border-green-300",
-      likely: "bg-accent-50 border-accent-200 hover:border-accent-300",
-      maybe: "bg-amber-50 border-amber-200 hover:border-amber-300",
-      unlikely: "bg-stone-50 border-stone-200 hover:border-stone-300",
+      eligible: "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50",
+      likely: "bg-accent-500/10 border-accent-500/30 hover:border-accent-500/50",
+      maybe: "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50",
+      unlikely: "bg-white/5 border-white/10 hover:border-white/20",
     };
 
     return (
@@ -221,7 +205,7 @@ function QualifyPageContent() {
         key={match.program_id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`rounded-2xl border-2 ${variantStyles[variant]} transition-all overflow-hidden`}
+        className={`rounded-2xl border ${variantStyles[variant]} transition-all overflow-hidden`}
       >
         <button
           onClick={() => setExpandedProgram(isExpanded ? null : match.program_id)}
@@ -231,20 +215,20 @@ function QualifyPageContent() {
             <div className="flex items-start gap-3 flex-1">
               <span className="text-2xl">{config.icon}</span>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-stone-900 line-clamp-2">{match.program_name}</h4>
+                <h4 className="font-semibold text-white line-clamp-2">{match.program_name}</h4>
                 <p className="text-sm text-stone-500">{match.provider}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                match.match_score >= 75 ? "bg-green-100 text-green-700" :
-                match.match_score >= 50 ? "bg-amber-100 text-amber-700" :
-                "bg-stone-100 text-stone-600"
+                match.match_score >= 75 ? "bg-emerald-500/20 text-emerald-400" :
+                match.match_score >= 50 ? "bg-amber-500/20 text-amber-400" :
+                "bg-white/10 text-stone-400"
               }`}>
                 {match.match_score}%
               </div>
               <svg 
-                className={`w-5 h-5 text-stone-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+                className={`w-5 h-5 text-stone-500 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor" 
@@ -255,24 +239,21 @@ function QualifyPageContent() {
             </div>
           </div>
           
-          {/* Brief explanation always visible */}
-          <p className="mt-3 text-sm text-stone-600 line-clamp-2">{match.explanation}</p>
+          <p className="mt-3 text-sm text-stone-400 line-clamp-2">{match.explanation}</p>
         </button>
 
-        {/* Expanded details */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="border-t border-stone-200"
+              className="border-t border-white/10"
             >
               <div className="p-5 space-y-4">
-                {/* Strengths */}
                 {match.strengths.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
+                    <h5 className="text-sm font-semibold text-emerald-400 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -280,8 +261,8 @@ function QualifyPageContent() {
                     </h5>
                     <ul className="space-y-1">
                       {match.strengths.map((s, i) => (
-                        <li key={i} className="text-sm text-stone-600 flex items-start gap-2">
-                          <span className="text-green-500 mt-1">•</span>
+                        <li key={i} className="text-sm text-stone-400 flex items-start gap-2">
+                          <span className="text-emerald-500 mt-1">•</span>
                           {s}
                         </li>
                       ))}
@@ -289,10 +270,9 @@ function QualifyPageContent() {
                   </div>
                 )}
 
-                {/* Concerns */}
                 {match.concerns.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-2">
+                    <h5 className="text-sm font-semibold text-amber-400 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
@@ -300,7 +280,7 @@ function QualifyPageContent() {
                     </h5>
                     <ul className="space-y-1">
                       {match.concerns.map((c, i) => (
-                        <li key={i} className="text-sm text-stone-600 flex items-start gap-2">
+                        <li key={i} className="text-sm text-stone-400 flex items-start gap-2">
                           <span className="text-amber-500 mt-1">•</span>
                           {c}
                         </li>
@@ -309,10 +289,9 @@ function QualifyPageContent() {
                   </div>
                 )}
 
-                {/* Action items */}
                 {match.action_items.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold text-primary-700 mb-2 flex items-center gap-2">
+                    <h5 className="text-sm font-semibold text-primary-400 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
@@ -320,7 +299,7 @@ function QualifyPageContent() {
                     </h5>
                     <ul className="space-y-1">
                       {match.action_items.map((a, i) => (
-                        <li key={i} className="text-sm text-stone-600 flex items-start gap-2">
+                        <li key={i} className="text-sm text-stone-400 flex items-start gap-2">
                           <span className="text-primary-500 mt-1">{i + 1}.</span>
                           {a}
                         </li>
@@ -329,10 +308,9 @@ function QualifyPageContent() {
                   </div>
                 )}
 
-                {/* View details link */}
                 <Link
                   href={`/programs/${match.program_id}`}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 mt-2"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-primary-400 hover:text-primary-300 mt-2"
                 >
                   View full program details
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -348,15 +326,24 @@ function QualifyPageContent() {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <div className="relative py-12 px-6 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-[10%] w-96 h-96 rounded-full bg-linear-to-tr from-accent-200/40 to-primary-200/20 blur-3xl" />
-          <div className="absolute bottom-0 right-[20%] w-64 h-64 rounded-full bg-linear-to-tr from-primary-200/30 to-accent-200/10 blur-3xl" />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.div 
+          className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-accent-500/10 rounded-full blur-[180px]"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 12, repeat: Infinity }}
+        />
+        <motion.div 
+          className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-primary-500/10 rounded-full blur-[150px]"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }}
+          transition={{ duration: 12, repeat: Infinity }}
+        />
+      </div>
 
-        <div className="max-w-4xl mx-auto relative">
+      {/* Header */}
+      <div className="relative py-12 px-6">
+        <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -364,7 +351,7 @@ function QualifyPageContent() {
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 mb-6 transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-300 mb-6 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -373,18 +360,20 @@ function QualifyPageContent() {
             </Link>
 
             <div className="flex items-center gap-4 mb-4">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-100 text-accent-700 text-sm font-medium">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-500/10 text-accent-400 text-sm font-medium border border-accent-500/20">
                 <span className="text-xl">🤖</span>
                 AI-Powered Matching
               </span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-bold text-stone-900 mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Find Your Perfect
               <br />
-              <span className="text-gradient">Scholarship Match</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400">
+                Scholarship Match
+              </span>
             </h1>
-            <p className="text-lg text-stone-500 max-w-xl">
+            <p className="text-lg text-stone-400 max-w-xl">
               Our AI analyzes your profile against every scholarship to find your best opportunities with personalized insights.
             </p>
           </motion.div>
@@ -392,9 +381,8 @@ function QualifyPageContent() {
       </div>
 
       {/* Form */}
-      <div className="px-6 pb-24">
+      <div className="px-6 pb-24 relative z-10">
         <div className="max-w-4xl mx-auto">
-          {/* Loading profile indicator */}
           {loadingProfile && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -402,28 +390,27 @@ function QualifyPageContent() {
               className="flex items-center justify-center py-12"
             >
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-stone-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-stone-500">Loading your profile...</p>
+                <div className="w-12 h-12 border-4 border-stone-700 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-stone-400">Loading your profile...</p>
               </div>
             </motion.div>
           )}
 
-          {/* Show profile loaded indicator when coming from onboarding */}
           {!loadingProfile && fromOnboarding && profileLoaded && loading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-2xl bg-green-50 border border-green-200"
+              className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-green-800">Profile loaded from onboarding!</p>
-                  <p className="text-sm text-green-600">Analyzing scholarships for you...</p>
+                  <p className="font-semibold text-emerald-400">Profile loaded from onboarding!</p>
+                  <p className="text-sm text-emerald-400/70">Analyzing scholarships for you...</p>
                 </div>
               </div>
             </motion.div>
@@ -435,7 +422,7 @@ function QualifyPageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             onSubmit={handleSubmit}
-            className="relative p-8 md:p-10 rounded-4xl bg-white border border-stone-200/80 shadow-xl shadow-stone-200/30"
+            className="relative p-8 md:p-10 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl"
           >
             {/* Step Indicator */}
             <div className="flex items-center justify-between mb-10">
@@ -446,16 +433,16 @@ function QualifyPageContent() {
                     onClick={() => setStep(s)}
                     className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                       step >= s
-                        ? "bg-primary-500 text-white shadow-lg shadow-primary-500/30"
-                        : "bg-stone-100 text-stone-400"
+                        ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
+                        : "bg-white/10 text-stone-500"
                     }`}
                   >
                     {s}
                   </button>
-                  <span className={`ml-3 text-sm font-medium hidden md:block ${step >= s ? "text-stone-900" : "text-stone-400"}`}>
+                  <span className={`ml-3 text-sm font-medium hidden md:block ${step >= s ? "text-white" : "text-stone-500"}`}>
                     {s === 1 ? "Background" : s === 2 ? "Academic" : "Circumstances"}
                   </span>
-                  {s < 3 && <div className="w-16 md:w-24 h-0.5 mx-4 bg-stone-100 rounded" />}
+                  {s < 3 && <div className="w-16 md:w-24 h-0.5 mx-4 bg-white/10 rounded" />}
                 </div>
               ))}
             </div>
@@ -471,20 +458,20 @@ function QualifyPageContent() {
                 >
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-900 mb-3">
-                        Nationality <span className="text-primary-500">*</span>
+                      <label className="block text-sm font-semibold text-white mb-3">
+                        Nationality <span className="text-primary-400">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={form.nationality}
                         onChange={(e) => setForm({ ...form, nationality: e.target.value })}
-                        className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                        className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                         placeholder="e.g., Nigerian, Ghanaian, Kenyan"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-stone-900 mb-3">
+                      <label className="block text-sm font-semibold text-white mb-3">
                         Age
                       </label>
                       <input
@@ -493,27 +480,27 @@ function QualifyPageContent() {
                         max={70}
                         value={form.age || ""}
                         onChange={(e) => setForm({ ...form, age: e.target.value ? parseInt(e.target.value) : null })}
-                        className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                        className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                         placeholder="Your current age"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Field of Study / Interest
                     </label>
                     <input
                       type="text"
                       value={form.field_of_study}
                       onChange={(e) => setForm({ ...form, field_of_study: e.target.value })}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
-                      placeholder="e.g., Computer Science, Medicine, Business, Engineering"
+                      className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
+                      placeholder="e.g., Computer Science, Medicine, Business"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Work Experience (years)
                     </label>
                     <input
@@ -522,14 +509,14 @@ function QualifyPageContent() {
                       max={50}
                       value={form.work_experience_years}
                       onChange={(e) => setForm({ ...form, work_experience_years: parseInt(e.target.value) || 0 })}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                      className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                     />
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="w-full px-8 py-4 rounded-2xl bg-stone-900 text-white font-semibold hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-8 py-4 rounded-xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
                   >
                     Continue
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -548,8 +535,8 @@ function QualifyPageContent() {
                   className="space-y-6"
                 >
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
-                      Current / Highest Degree <span className="text-primary-500">*</span>
+                    <label className="block text-sm font-semibold text-white mb-3">
+                      Current / Highest Degree <span className="text-primary-400">*</span>
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {["High School", "BSc/BA", "MSc/MA", "PhD", "Other"].map((d) => (
@@ -559,8 +546,8 @@ function QualifyPageContent() {
                           onClick={() => setForm({ ...form, degree: d })}
                           className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                             form.degree === d
-                              ? "bg-primary-500 text-white shadow-lg shadow-primary-500/30"
-                              : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                              ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
+                              : "bg-white/5 text-stone-300 hover:bg-white/10 border border-white/10"
                           }`}
                         >
                           {d}
@@ -570,8 +557,8 @@ function QualifyPageContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
-                      What degree are you looking for? <span className="text-primary-500">*</span>
+                    <label className="block text-sm font-semibold text-white mb-3">
+                      What degree are you looking for? <span className="text-primary-400">*</span>
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
@@ -586,8 +573,8 @@ function QualifyPageContent() {
                           onClick={() => setForm({ ...form, target_degree: d.value })}
                           className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                             form.target_degree === d.value
-                              ? "bg-accent-500 text-white shadow-lg shadow-accent-500/30"
-                              : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                              ? "bg-gradient-to-r from-accent-500 to-teal-600 text-white shadow-lg shadow-accent-500/30"
+                              : "bg-white/5 text-stone-300 hover:bg-white/10 border border-white/10"
                           }`}
                         >
                           <span>{d.icon}</span>
@@ -598,7 +585,7 @@ function QualifyPageContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       GPA (on 4.0 scale)
                     </label>
                     <input
@@ -608,20 +595,20 @@ function QualifyPageContent() {
                       max={4}
                       value={form.gpa || ""}
                       onChange={(e) => setForm({ ...form, gpa: e.target.value ? parseFloat(e.target.value) : null })}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                      className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                       placeholder="e.g., 3.5"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Language Proficiency
                     </label>
                     <input
                       type="text"
                       value={form.languages.join(", ")}
                       onChange={(e) => setForm({ ...form, languages: e.target.value.split(",").map(l => l.trim()).filter(Boolean) })}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+                      className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500"
                       placeholder="e.g., English (IELTS 7.5), French (B2)"
                     />
                   </div>
@@ -630,14 +617,14 @@ function QualifyPageContent() {
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="px-6 py-4 rounded-2xl border-2 border-stone-200 text-stone-700 font-semibold hover:bg-stone-50 transition-colors"
+                      className="px-6 py-4 rounded-xl border border-white/10 text-stone-300 font-semibold hover:bg-white/5 transition-colors"
                     >
                       Back
                     </button>
                     <button
                       type="button"
                       onClick={() => setStep(3)}
-                      className="flex-1 px-8 py-4 rounded-2xl bg-stone-900 text-white font-semibold hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-8 py-4 rounded-xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
                     >
                       Continue
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -657,7 +644,7 @@ function QualifyPageContent() {
                   className="space-y-6"
                 >
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Financial Situation
                     </label>
                     <div className="grid grid-cols-3 gap-3">
@@ -672,8 +659,8 @@ function QualifyPageContent() {
                           onClick={() => setForm({ ...form, has_financial_need: opt.value })}
                           className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                             form.has_financial_need === opt.value
-                              ? "bg-primary-500 text-white shadow-lg shadow-primary-500/30"
-                              : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                              ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
+                              : "bg-white/5 text-stone-300 hover:bg-white/10 border border-white/10"
                           }`}
                         >
                           {opt.label}
@@ -683,34 +670,34 @@ function QualifyPageContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Special Circumstances
                     </label>
                     <p className="text-sm text-stone-500 mb-3">
                       Many scholarships prioritize applicants from underrepresented groups
                     </p>
                     <div className="space-y-3">
-                      <label className="flex items-center gap-3 p-4 rounded-xl bg-stone-50 border border-stone-200 cursor-pointer hover:bg-stone-100 transition-colors">
+                      <label className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
                         <input
                           type="checkbox"
                           checked={form.is_refugee}
                           onChange={(e) => setForm({ ...form, is_refugee: e.target.checked })}
-                          className="w-5 h-5 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+                          className="w-5 h-5 rounded border-white/20 bg-white/5 text-primary-500 focus:ring-primary-500"
                         />
                         <div>
-                          <span className="font-medium text-stone-900">Refugee or displaced person</span>
+                          <span className="font-medium text-white">Refugee or displaced person</span>
                           <p className="text-sm text-stone-500">Seeking asylum or forced to leave home country</p>
                         </div>
                       </label>
-                      <label className="flex items-center gap-3 p-4 rounded-xl bg-stone-50 border border-stone-200 cursor-pointer hover:bg-stone-100 transition-colors">
+                      <label className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
                         <input
                           type="checkbox"
                           checked={form.has_disability}
                           onChange={(e) => setForm({ ...form, has_disability: e.target.checked })}
-                          className="w-5 h-5 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+                          className="w-5 h-5 rounded border-white/20 bg-white/5 text-primary-500 focus:ring-primary-500"
                         />
                         <div>
-                          <span className="font-medium text-stone-900">Person with disability</span>
+                          <span className="font-medium text-white">Person with disability</span>
                           <p className="text-sm text-stone-500">Physical, sensory, cognitive, or other disability</p>
                         </div>
                       </label>
@@ -718,15 +705,15 @@ function QualifyPageContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-stone-900 mb-3">
+                    <label className="block text-sm font-semibold text-white mb-3">
                       Anything else we should know?
                     </label>
                     <textarea
                       value={form.additional_info}
                       onChange={(e) => setForm({ ...form, additional_info: e.target.value })}
                       rows={3}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-stone-200 bg-stone-50 focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-100 outline-none transition-all text-stone-900 placeholder:text-stone-400 resize-none"
-                      placeholder="Leadership experience, awards, research interests, first-generation student, etc."
+                      className="w-full px-5 py-4 rounded-xl border border-white/10 bg-white/5 focus:border-primary-500/50 focus:bg-white/10 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all text-white placeholder:text-stone-500 resize-none"
+                      placeholder="Leadership experience, awards, research interests..."
                     />
                   </div>
 
@@ -734,14 +721,14 @@ function QualifyPageContent() {
                     <button
                       type="button"
                       onClick={() => setStep(2)}
-                      className="px-6 py-4 rounded-2xl border-2 border-stone-200 text-stone-700 font-semibold hover:bg-stone-50 transition-colors"
+                      className="px-6 py-4 rounded-xl border border-white/10 text-stone-300 font-semibold hover:bg-white/5 transition-colors"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={loading || !form.nationality || !form.degree || !form.target_degree}
-                      className="flex-1 px-8 py-4 rounded-2xl bg-linear-to-r from-primary-600 to-primary-500 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 px-8 py-4 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {loading ? (
                         <>
@@ -767,18 +754,16 @@ function QualifyPageContent() {
           </motion.form>
           )}
 
-          {/* Error */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-center"
+              className="mt-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-center"
             >
               {error}
             </motion.div>
           )}
 
-          {/* Results */}
           <AnimatePresence>
             {results && (
               <motion.div
@@ -788,12 +773,12 @@ function QualifyPageContent() {
                 className="mt-12 space-y-8"
               >
                 {/* AI Summary */}
-                <div className="p-6 rounded-3xl bg-linear-to-tr from-primary-50 to-accent-50 border border-primary-200">
+                <div className="p-6 rounded-3xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 border border-primary-500/20">
                   <div className="flex items-start gap-4">
                     <span className="text-4xl">🤖</span>
                     <div>
-                      <h3 className="font-bold text-stone-900 mb-2">AI Analysis Summary</h3>
-                      <p className="text-stone-700 leading-relaxed">{results.ai_summary}</p>
+                      <h3 className="font-bold text-white mb-2">AI Analysis Summary</h3>
+                      <p className="text-stone-300 leading-relaxed">{results.ai_summary}</p>
                       <p className="text-sm text-stone-500 mt-3">
                         Analyzed {results.total_programs_analyzed} scholarships in {results.processing_time.toFixed(1)}s
                       </p>
@@ -803,33 +788,27 @@ function QualifyPageContent() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-center">
-                    <div className="text-3xl font-bold text-green-700">{results.eligible.length}</div>
-                    <div className="text-sm text-green-600">Eligible</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-accent-50 border border-accent-200 text-center">
-                    <div className="text-3xl font-bold text-accent-700">{results.likely_eligible.length}</div>
-                    <div className="text-sm text-accent-600">Likely</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center">
-                    <div className="text-3xl font-bold text-amber-700">{results.maybe.length}</div>
-                    <div className="text-sm text-amber-600">Maybe</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-center">
-                    <div className="text-3xl font-bold text-stone-600">{results.not_eligible.length}</div>
-                    <div className="text-sm text-stone-500">Not Eligible</div>
-                  </div>
+                  {[
+                    { label: "Eligible", value: results.eligible.length, color: "bg-emerald-500/10 border-emerald-500/20", textColor: "text-emerald-400" },
+                    { label: "Likely", value: results.likely_eligible.length, color: "bg-accent-500/10 border-accent-500/20", textColor: "text-accent-400" },
+                    { label: "Maybe", value: results.maybe.length, color: "bg-amber-500/10 border-amber-500/20", textColor: "text-amber-400" },
+                    { label: "Not Eligible", value: results.not_eligible.length, color: "bg-white/5 border-white/10", textColor: "text-stone-400" },
+                  ].map((stat) => (
+                    <div key={stat.label} className={`p-4 rounded-2xl ${stat.color} border text-center`}>
+                      <div className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</div>
+                      <div className="text-sm text-stone-500">{stat.label}</div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Eligible */}
                 {results.eligible.length > 0 && (
                   <section>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                         <span className="text-xl">✅</span>
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900">Perfect Matches</h3>
+                        <h3 className="text-lg font-bold text-white">Perfect Matches</h3>
                         <p className="text-sm text-stone-500">You meet all the requirements</p>
                       </div>
                     </div>
@@ -839,15 +818,14 @@ function QualifyPageContent() {
                   </section>
                 )}
 
-                {/* Likely Eligible */}
                 {results.likely_eligible.length > 0 && (
                   <section>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
                         <span className="text-xl">🎯</span>
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900">Likely Eligible</h3>
+                        <h3 className="text-lg font-bold text-white">Likely Eligible</h3>
                         <p className="text-sm text-stone-500">Strong candidates with minor gaps</p>
                       </div>
                     </div>
@@ -857,15 +835,14 @@ function QualifyPageContent() {
                   </section>
                 )}
 
-                {/* Maybe */}
                 {results.maybe.length > 0 && (
                   <section>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
                         <span className="text-xl">🤔</span>
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-stone-900">Worth Exploring</h3>
+                        <h3 className="text-lg font-bold text-white">Worth Exploring</h3>
                         <p className="text-sm text-stone-500">May require additional qualifications</p>
                       </div>
                     </div>
@@ -880,11 +857,10 @@ function QualifyPageContent() {
                   </section>
                 )}
 
-                {/* Browse All CTA */}
                 <div className="text-center pt-8">
                   <Link
                     href="/programs"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary-400 hover:text-primary-300"
                   >
                     Browse all programs
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
