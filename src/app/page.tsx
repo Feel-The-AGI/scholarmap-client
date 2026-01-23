@@ -125,7 +125,7 @@ function HomeContent() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/programs"
-                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl hover:brightness-110 transition-all active:scale-[0.98]"
                 >
                   Browse All Programs
                   <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
